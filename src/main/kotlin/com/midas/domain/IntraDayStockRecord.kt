@@ -5,6 +5,7 @@ import com.midas.interfaces.IntraDayMarketWebService
 import com.midas.interfaces.ExecutionWindowPicker
 import com.midas.repositories.IntraDayStockRecordRepository
 import com.midas.utilities.DomainValueCompareUtil
+import com.midas.utilities.Etl
 import com.midas.utilities.HttpUtility
 import jakarta.annotation.PostConstruct
 import jakarta.persistence.*
@@ -41,7 +42,7 @@ class IntraDayStockRecord {
     private val openPrice: Double
 
     @Column
-    private val accumulatedVolume: Long
+    private val accumulatedVolume: Double
 
     @Column
     private val todaysChange: Double
@@ -49,7 +50,7 @@ class IntraDayStockRecord {
     private val todaysChangePercentage: Double
 
     @Column
-    private val previousDayVolume: Long
+    private val previousDayVolume: Double
     @Column
     private val previousDayLow: Double
     @Column
@@ -74,10 +75,10 @@ class IntraDayStockRecord {
             price: Double,
             vwap: Double,
             openPrice: Double,
-            accumulatedVolume: Long,
+            accumulatedVolume: Double,
             todaysChange: Double,
             todaysChangePercentage: Double,
-            previousDayVolume: Long,
+            previousDayVolume: Double,
             previousDayClose: Double,
             previousDayOpen: Double,
             previousDayHigh: Double,
@@ -154,7 +155,7 @@ class IntraDayStockRecord {
             intraDayMarketWebService: IntraDayMarketWebService
         ) {
             val unValidatedWindow = executionWindowPicker.getExecutionWindow()
-            val executionWindow   = unValidatedWindow//validateWindow(hour = unValidatedWindow[0],minutes = unValidatedWindow[1]) ?: return
+            val executionWindow   = validateWindow(hour = unValidatedWindow[0],minutes = unValidatedWindow[1]) ?: return
 
             if (!intraDayMarketWebService.isMarketOpen()) {
                 println("Download skipped. Market is not open.")
@@ -174,15 +175,15 @@ class IntraDayStockRecord {
         ) {
             val recordsByTicker: MutableMap<String, MutableList<IntraDayStockRecord>> = loadRecordsByTicker(date = todaysDate)
             var errorFileWritten = false
+            println("Ingesting...")
             for(i in 0 until stockRecords.size) {
-                println("Record:$i")
                 val r = stockRecords[i] as JSONObject
                 try {
-                    val previousDayClose  = (r["prevDay"] as JSONObject)["c"] as Double
-                    val todaysChange      = (r["todaysChange"] as Double)
+                    val previousDayClose  = Etl.double((r["prevDay"] as JSONObject)["c"])
+                    val todaysChange      = Etl.double((r["todaysChange"]))
                     val ticker            = r["ticker"] as String
-                    val price             = previousDayClose + todaysChange
-                    val previousDayVwap   = (r["prevDay"] as JSONObject)["vw"] as Double
+                    val price             = Etl.double(previousDayClose + todaysChange)
+                    val previousDayVwap   = Etl.double((r["prevDay"] as JSONObject)["vw"])
 
                     Ticker.saveIfNotExist(symbol = ticker)
 
@@ -190,16 +191,16 @@ class IntraDayStockRecord {
                         IntraDayStockRecord(
                             ticker                 = ticker,
                             price                  = price,
-                            vwap                   = (r["min"] as JSONObject)["vw"] as Double,
-                            openPrice              = (r["day"] as JSONObject)["o"] as Double,
-                            accumulatedVolume      = (r["min"] as JSONObject)["av"] as Long,
+                            vwap                   = Etl.double((r["min"] as JSONObject)["vw"]),
+                            openPrice              = Etl.double((r["day"] as JSONObject)["o"]),
+                            accumulatedVolume      = Etl.double((r["min"] as JSONObject)["av"]),
                             todaysChange           = todaysChange,
-                            todaysChangePercentage = (r["todaysChangePerc"] as Double),
-                            previousDayVolume      = (r["prevDay"] as JSONObject)["v"] as Long,
+                            todaysChangePercentage = Etl.double((r["todaysChangePerc"])),
+                            previousDayVolume      = Etl.double((r["prevDay"] as JSONObject)["v"]),
                             previousDayClose       = previousDayClose,
-                            previousDayOpen        = (r["prevDay"] as JSONObject)["o"] as Double,
-                            previousDayHigh        = (r["prevDay"] as JSONObject)["h"] as Double,
-                            previousDayLow         = (r["prevDay"] as JSONObject)["l"] as Double,
+                            previousDayOpen        = Etl.double((r["prevDay"] as JSONObject)["o"]),
+                            previousDayHigh        = Etl.double((r["prevDay"] as JSONObject)["h"]),
+                            previousDayLow         = Etl.double((r["prevDay"] as JSONObject)["l"]),
                             hour                   = executionWindow[0],
                             minute                 = executionWindow[1],
                             externalTime           = (r["updated"] as Long),
@@ -215,8 +216,8 @@ class IntraDayStockRecord {
                             volumeChangePercent = 0.0
                         )
                     } else {
-                        /** It's important to note this is for all time windows that have a previous. So if a
-                         * disaster occurs and theres no previous record then no deltas are built for that time window. **/
+                        /** If for any reason there's no previous stock record
+                         * then no delta record will be calculated until the next cycle. **/
                         val previousRecord = getPreviousRecordInExecutionWindow(
                             ticker          = ticker,
                             hour            = executionWindow[0],
@@ -278,16 +279,8 @@ class IntraDayStockRecord {
         private class PolyGonService : IntraDayMarketWebService {
             override fun downloadRecords() : JSONObject {
                 val url: String = applicationProperties.polygonAllTickersURL +
-                        "?apiKey=${applicationProperties.polyGonApiKey}"
+                        "?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
                 return HttpUtility.getJSONObject(inputURL = url)
-
-                /*val status = r["status"] as String?
-                if ((status == null) || (status != "OK")) {
-                    println("Status: $status")
-                    println("Status was not OK")
-                    throw RuntimeException(r.toJSONString())
-                }
-                return r*/
             }
 
             override fun isMarketOpen(): Boolean {
@@ -305,7 +298,7 @@ class IntraDayStockRecord {
 
                 val nycStatus =  (r["exchanges"] as JSONObject)["nyse"] as String // closed, open, extended-hours
                 println("Market values -> NYC: $nycStatus")
-                return nycStatus != "closed"
+                return nycStatus == "open"
             }
         }
 
@@ -320,7 +313,7 @@ class IntraDayStockRecord {
             printWriter.close()
         }
 
-        fun validateWindow(hour: Int, minutes: Int): Array<Int>? {
+        private fun validateWindow(hour: Int, minutes: Int): Array<Int>? {
             /* 4:00 to 16:00 */
             val times = listOf(
                 arrayOf(9, 30),
@@ -379,8 +372,7 @@ class IntraDayStockRecord {
         }
 
         private fun save(record: IntraDayStockRecord) : IntraDayStockRecord {
-            val newRecord  = intraDayStockRecordRepository.save(record)
-            return newRecord
+            return intraDayStockRecordRepository.save(record)
         }
 
         fun deleteAll() {
