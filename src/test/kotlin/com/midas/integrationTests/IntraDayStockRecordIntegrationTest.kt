@@ -27,7 +27,7 @@ class IntraDayStockRecordIntegrationTest(
 
     @AfterEach
     fun tearDown() {
-        IntraDayStockRecord.deleteAll()
+        //IntraDayStockRecord.deleteAll()
     }
 
     @Test
@@ -38,6 +38,21 @@ class IntraDayStockRecordIntegrationTest(
         val mockExecutionWindowPicker1          = MockExecutionWindowPicker()
         mockExecutionWindowPicker1.window       = arrayOf(9,30) //9:30 AM
         val date                                = Date(0)
+
+        /** Test inputs that match what is in the test file **/
+        val price                  = 20.506
+        val vwap                   = 20.5105
+        val openPrice              = 20.64
+        val highPrice              = 20.64
+        val lowPrice               = 20.506
+        val accumulatedVolume      = 37216.0
+        val todaysChange           = -0.124
+        val todaysChangePercentage = -0.601
+        val previousDayVolume      = 292738.0
+        val previousDayClose       = 20.63
+        val previousDayOpen        = 20.79
+        val previousDayHigh        = 21.0
+        val previousDayLow         = 20.5
 
         /** Download one file at "9:30" and validate results followed by one at 10: 30 **/
         IntraDayStockRecord.downloadContinuously(
@@ -51,17 +66,19 @@ class IntraDayStockRecordIntegrationTest(
                 position        = 0,
                     referenceEntry = IntraDayStockRecord(
                         ticker                 = "BCAT",
-                        price                  = 20.506,
-                        vwap                   = 20.5105,
-                        openPrice              = 20.64,
-                        accumulatedVolume      = 37216.0,
-                        todaysChange           = -0.124,
-                        todaysChangePercentage = -0.601,
-                        previousDayVolume      = 292738.0,
-                        previousDayClose       = 20.63,
-                        previousDayOpen        = 20.79,
-                        previousDayHigh        = 21.0,
-                        previousDayLow         = 20.5,
+                        price                  = price,
+                        vwap                   = vwap,
+                        openPrice              = openPrice,
+                        highPrice              = highPrice,
+                        lowPrice               = lowPrice,
+                        accumulatedVolume      = accumulatedVolume,
+                        todaysChange           = todaysChange,
+                        todaysChangePercentage = todaysChangePercentage,
+                        previousDayVolume      = previousDayVolume,
+                        previousDayClose       = previousDayClose,
+                        previousDayOpen        = previousDayOpen,
+                        previousDayHigh        = previousDayHigh,
+                        previousDayLow         = previousDayLow,
                         hour                   = mockExecutionWindowPicker1.window[0],
                         minute                 = mockExecutionWindowPicker1.window[1],
                         externalTime           = 1605192894630916600,
@@ -72,21 +89,26 @@ class IntraDayStockRecordIntegrationTest(
             date             = date,
             position         = 0,
                 referenceEntry  = DeltasOfStockIndicators(
-                    ticker              = "BCAT",
-                    priceChangePercent  = 0.048473097430933414,
-                    volumeChangePercent = 0.0,
-                    vwapChangePercent   = -0.8862515040664104,
-                    volatilityEstimate  =  2.405002405002405,
-                    hour                =  mockExecutionWindowPicker1.window[0],
-                    minute              =  mockExecutionWindowPicker1.window[1],
-                    externalTime        =  1605192894630916600,
-                    creationDate        =  date
+                    ticker                          = "BCAT",
+                    priceChangePercent              = 0.048473097430933414,
+                    volumeChangePercent             = 0.0,
+                    vwapChangePercent               = -0.8862515040664104,
+                    volumePriceDeltaRatio           = 0.0, // (volumeChangePercent / priceChangePercent ) * 100
+                    volatilityEstimate              =  2.405002405002405,
+                    priceDeltaVolatilityRatio       = (0.048473097430933414 / 2.405002405002405) * 100,
+                    priceDeltaVolatilityDiff        = 0.048473097430933414 - 2.405002405002405,
+                    runningVolatilityEstimate       = ((20.64 - 20.506)/ 20.64)*100,
+                    todayPreviousVolatilityDelta    = ((((20.64 - 20.506)/ 20.64)*100)/2.405002405002405) * 100,
+                    hour                            =  mockExecutionWindowPicker1.window[0],
+                    minute                          =  mockExecutionWindowPicker1.window[1],
+                    externalTime                    =  1605192894630916600,
+                    creationDate                    =  date
                 )
         )
 
         /** Now download it at "10:30" and validate the results.------------------------------**/
         val mockPolyGonWebService2              = MockPolyGonWebService()
-        mockPolyGonWebService2.downloadResponse = getWebServiceData("/intra-day/download-1.json")
+        mockPolyGonWebService2.downloadResponse = getWebServiceData("/intra-day/download-2.json")
         mockPolyGonWebService2.marketOpen       = true
         val mockExecutionWindowPicker2          = MockExecutionWindowPicker()
         mockExecutionWindowPicker2.window       = arrayOf(10,30) //9:30 AM
@@ -97,41 +119,53 @@ class IntraDayStockRecordIntegrationTest(
             executionWindowPicker    = mockExecutionWindowPicker2
         )
 
+        /** Values in download-2.json are double the values in download-1 **/
         IntraDayStockRecord.validateEntry(
             date            = date,
             position        = 1,
                 referenceEntry = IntraDayStockRecord(
                     ticker                 = "BCAT",
-                    price                  = 20.506,
-                    vwap                   = 20.5105,
-                    openPrice              = 20.64,
-                    accumulatedVolume      = 37216.0,
-                    todaysChange           = -0.124,
-                    todaysChangePercentage = -0.601,
-                    previousDayVolume      = 292738.0,
-                    previousDayClose       = 20.63,
-                    previousDayOpen        = 20.79,
-                    previousDayHigh        = 21.0,
-                    previousDayLow         = 20.5,
+                    price                  = price*2,
+                    vwap                   = vwap*2,
+                    openPrice              = openPrice*2,
+                    highPrice              = highPrice*2,
+                    lowPrice               = lowPrice*2,
+                    accumulatedVolume      = accumulatedVolume*2,
+                    todaysChange           = todaysChange*2,
+                    todaysChangePercentage = todaysChangePercentage*2,
+                    previousDayVolume      = previousDayVolume*2,
+                    previousDayClose       = previousDayClose*2,
+                    previousDayOpen        = previousDayOpen*2,
+                    previousDayHigh        = previousDayHigh*2,
+                    previousDayLow         = previousDayLow*2,
                     hour                   = mockExecutionWindowPicker2.window[0],
                     minute                 = mockExecutionWindowPicker2.window[1],
                     externalTime           = 1605192894630916600,
                     creationDate           = date
                 )
         )
+
+        val volatilityEstimate        = ((42.0 - 41.0) / 41.58)*100.0
+        val runningVolatilityEstimate = ((41.28 - 41.012)/ 41.28)*100.0
+
         DeltasOfStockIndicators.validateEntry(
             date     = date,
             position = 1,
                 referenceEntry  = DeltasOfStockIndicators(
-                    ticker              = "BCAT",
-                    priceChangePercent  = 0.0,
-                    volumeChangePercent = 0.0,
-                    vwapChangePercent   = 0.0,
-                    volatilityEstimate  =  2.405002405002405,
-                    hour                =  mockExecutionWindowPicker2.window[0],
-                    minute              =  mockExecutionWindowPicker2.window[1],
-                    externalTime        =  1605192894630916600,
-                    creationDate        =  date
+                    ticker                       = "BCAT",
+                    priceChangePercent           = 100.0,
+                    volumeChangePercent          = 100.0,
+                    vwapChangePercent            = 100.0,
+                    volumePriceDeltaRatio        = 100.0,
+                    volatilityEstimate           = volatilityEstimate,
+                    priceDeltaVolatilityRatio    = 4158.0,
+                    priceDeltaVolatilityDiff     = 100.0 - 2.405002405002405,
+                    runningVolatilityEstimate    = runningVolatilityEstimate,
+                    todayPreviousVolatilityDelta = (runningVolatilityEstimate / volatilityEstimate) *100,
+                    hour                         = mockExecutionWindowPicker2.window[0],
+                    minute                       = mockExecutionWindowPicker2.window[1],
+                    externalTime                 = 1605192894630916600,
+                    creationDate                 = date
                 )
         )
     }

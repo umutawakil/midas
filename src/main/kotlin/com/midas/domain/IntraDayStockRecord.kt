@@ -40,6 +40,10 @@ class IntraDayStockRecord {
     private val vwap: Double
     @Column
     private val openPrice: Double
+    @Column
+    private val lowPrice: Double
+    @Column
+    private val highPrice: Double
 
     @Column
     private val accumulatedVolume: Double
@@ -75,6 +79,8 @@ class IntraDayStockRecord {
             price: Double,
             vwap: Double,
             openPrice: Double,
+            lowPrice: Double,
+            highPrice: Double,
             accumulatedVolume: Double,
             todaysChange: Double,
             todaysChangePercentage: Double,
@@ -92,6 +98,8 @@ class IntraDayStockRecord {
         this.price                  = price
         this.vwap                   = vwap
         this.openPrice              = openPrice
+        this.lowPrice               = lowPrice
+        this.highPrice              = highPrice
         this.accumulatedVolume      = accumulatedVolume
         this.todaysChange           = todaysChange
         this.todaysChangePercentage = todaysChangePercentage
@@ -193,6 +201,8 @@ class IntraDayStockRecord {
                             price                  = price,
                             vwap                   = Etl.double((r["min"] as JSONObject)["vw"]),
                             openPrice              = Etl.double((r["day"] as JSONObject)["o"]),
+                            highPrice              = Etl.double((r["day"] as JSONObject)["h"]),
+                            lowPrice               = Etl.double((r["day"] as JSONObject)["l"]),
                             accumulatedVolume      = Etl.double((r["min"] as JSONObject)["av"]),
                             todaysChange           = todaysChange,
                             todaysChangePercentage = Etl.double((r["todaysChangePerc"])),
@@ -252,17 +262,25 @@ class IntraDayStockRecord {
                 volumeChangePercent :Double,
                 vwapChangePercent   :Double,
         ) {
+            val volatilityEstimate        = ((newRecord.previousDayHigh - newRecord.previousDayLow) / newRecord.previousDayOpen) * 100
+            val runningVolatilityEstimate = (newRecord.highPrice - newRecord.lowPrice)/newRecord.openPrice * 100
+
             DeltasOfStockIndicators.save(
                     DeltasOfStockIndicators(
-                            ticker              = newRecord.ticker,
-                            priceChangePercent  = priceChangePercent,
-                            volumeChangePercent = volumeChangePercent,
-                            vwapChangePercent   = vwapChangePercent,
-                            volatilityEstimate  = ((newRecord.previousDayHigh - newRecord.previousDayLow) / newRecord.previousDayOpen) * 100,
-                            hour                =  newRecord.hour,
-                            minute              =  newRecord.minute,
-                            externalTime        =  newRecord.externalTime,
-                            creationDate        =  newRecord.creationDate
+                        ticker                          = newRecord.ticker,
+                        priceChangePercent              = priceChangePercent,
+                        volumeChangePercent             = volumeChangePercent,
+                        vwapChangePercent               = vwapChangePercent,
+                        volumePriceDeltaRatio           = if(priceChangePercent == 0.0) { Double.MAX_VALUE} else {((volumeChangePercent /priceChangePercent)*100)},
+                        volatilityEstimate              = volatilityEstimate,
+                        priceDeltaVolatilityRatio       = (priceChangePercent / volatilityEstimate) * 100,
+                        priceDeltaVolatilityDiff        = priceChangePercent - volatilityEstimate,
+                        runningVolatilityEstimate       = runningVolatilityEstimate,
+                        todayPreviousVolatilityDelta    = (runningVolatilityEstimate/volatilityEstimate) * 100,
+                        hour                            =  newRecord.hour,
+                        minute                          =  newRecord.minute,
+                        externalTime                    =  newRecord.externalTime,
+                        creationDate                    =  newRecord.creationDate
                     )
             )
         }
@@ -362,9 +380,9 @@ class IntraDayStockRecord {
             val lastRecord = recordsForToday[recordsForToday.size - 1]
 
             if (
-                    ((lastRecord.hour == hour - 1) && (lastRecord.minute == minute)) ||
-                    ((hour == 16) && (minute == 0))
-                )
+                 ((lastRecord.hour == hour - 1) && (lastRecord.minute == minute)) ||
+                 ((hour == 16) && (minute == 0))
+               )
             {
                 return lastRecord
             }

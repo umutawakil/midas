@@ -26,9 +26,22 @@ class DeltasOfStockIndicators {
     @Column
     private val volumeChangePercent: Double
     @Column
+    private val volumePriceDeltaRatio: Double
+    @Column
+    private val volumePriceDeltaLag: Double
+    @Column
     private val vwapChangePercent: Double
     @Column
     private val volatilityEstimate: Double
+
+    @Column
+    private val priceDeltaVolatilityRatio: Double
+    @Column
+    private val priceDeltaVolatilityDiff: Double
+    @Column
+    private val runningVolatilityEstimate: Double
+    @Column
+    private val todayPreviousVolatilityDelta: Double
 
     @Column
     private val hour: Int
@@ -45,21 +58,32 @@ class DeltasOfStockIndicators {
             priceChangePercent: Double,
             volumeChangePercent: Double,
             vwapChangePercent: Double,
+            volumePriceDeltaRatio: Double,
             volatilityEstimate: Double,
+            priceDeltaVolatilityRatio: Double,
+            priceDeltaVolatilityDiff: Double,
+            runningVolatilityEstimate: Double,
+            todayPreviousVolatilityDelta: Double,
             hour: Int,
             minute: Int,
             externalTime: Long,
             creationDate: Date,
     ) {
-        this.ticker              = ticker
-        this.priceChangePercent  = priceChangePercent
-        this.volumeChangePercent = volumeChangePercent
-        this.vwapChangePercent   = vwapChangePercent
-        this.volatilityEstimate  = volatilityEstimate
-        this.hour                = hour
-        this.minute              = minute
-        this.externalTime        = externalTime
-        this.creationDate        = creationDate
+        this.ticker                          = ticker
+        this.priceChangePercent              = priceChangePercent
+        this.volumeChangePercent             = volumeChangePercent
+        this.vwapChangePercent               = vwapChangePercent
+        this.volumePriceDeltaRatio           = volumePriceDeltaRatio//if(priceChangePercent == 0.0) { Double.POSITIVE_INFINITY} else {((volumeChangePercent /priceChangePercent)*100)}
+        this.volumePriceDeltaLag             = volumeChangePercent - priceChangePercent
+        this.volatilityEstimate              = volatilityEstimate
+        this.priceDeltaVolatilityRatio       = priceDeltaVolatilityRatio
+        this.priceDeltaVolatilityDiff        = priceDeltaVolatilityDiff
+        this.runningVolatilityEstimate       = runningVolatilityEstimate
+        this.todayPreviousVolatilityDelta    = todayPreviousVolatilityDelta
+        this.hour                            = hour
+        this.minute                          = minute
+        this.externalTime                    = externalTime
+        this.creationDate                    = creationDate
     }
 
     @Component
