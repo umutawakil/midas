@@ -10,7 +10,8 @@ class ApplicationProperties {
     val polyGonApiKey          : String
     val selectedHbmDialect     : String
     val errorDirectory         : String
-    val isIntegrationTest      : Boolean
+    val isNotIntegrationTest      : Boolean
+    val pollIntervalMins       : Int
 
     constructor(
             runIntraDayStockService: Boolean,
@@ -19,7 +20,8 @@ class ApplicationProperties {
             polyGonApiKey          : String,
             selectedHbmDialect     : String,
             errorDirectory         : String,
-            isIntegrationTest      : Boolean
+            isNotIntegrationTest   : Boolean,
+            pollIntervalMins       : Int
     ) {
         this.runIntraDayStockService = runIntraDayStockService
         this.polygonMarketStatusURL  = polygonMarketStatusURL
@@ -27,6 +29,7 @@ class ApplicationProperties {
         this.polyGonApiKey           = polyGonApiKey
         this.selectedHbmDialect      = selectedHbmDialect
         this.errorDirectory          = errorDirectory
-        this.isIntegrationTest       = isIntegrationTest
+        this.isNotIntegrationTest    = isNotIntegrationTest
+        this.pollIntervalMins        = pollIntervalMins
     }
 }

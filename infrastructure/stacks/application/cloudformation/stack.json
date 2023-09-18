@@ -1,0 +1,154 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "Environment": {
+      "Type": "String"
+    },
+    "DeploymentBucket": {
+      "Type": "String"
+    },
+    "InstanceType": {
+      "Description": "The type of EC2 Instance",
+      "Type": "String"
+    },
+    "AMI": {
+      "Type": "String",
+      "Description": "THis is the amazon Machine Image used as the base template to build this stack from."
+    },
+    "NumberOfEC2Instances": {
+      "Type": "String"
+    },
+    "SSHKeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "ConstraintDescription": "can contain only ASCII characters."
+    },
+    "NotificationEmail": {
+      "Type": "String",
+      "Description": "Email to send Notifications/Alerts about application State."
+    },
+    "ChangeId": {
+      "Type": "String",
+      "Description": "This is currently the git commit number of the last change on this project. This is not a Version number or release number but a change identifier."
+    }
+  },
+  "Resources": {
+    "InstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "S3ReadPolicy": {
+      "DependsOn": ["InstanceRole"],
+      "Description": "Allows EC2 instances ability to read files from deployment bucket",
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "DeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid":  {"Fn::Join": ["",["ec2-deployment-bucket-",{"Ref": "Environment"}]]},
+              "Action": ["s3:Get*", "s3:List*"],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {"Fn::GetAtt": ["InstanceRole", "Arn"]}
+              },
+              "Resource": [
+                {"Fn::Join": ["",["arn:aws:s3:::",{"Ref": "DeploymentBucket"},"/*"]]},
+                {"Fn::Join": ["",["arn:aws:s3:::",{"Ref": "DeploymentBucket"},""]]}
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "InstanceProfile": {
+      "DependsOn": ["InstanceRole"],
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "InstanceRole"
+          }
+        ]
+      }
+    },
+    "EC2Instance" : {
+      "DependsOn": ["InstanceProfile"],
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : {"Ref": "AMI"},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName" : {"Ref": "SSHKeyName"},
+        "IamInstanceProfile" : {"Ref": "InstanceProfile"},
+        "SecurityGroupIds": [{"Fn::ImportValue":{"Fn::Join" : ["", ["application-security-group-id", {"Ref": "Environment"}]]}}],
+        "SubnetId": {"Fn::Select": [0,{"Fn::Split": [",",{"Fn::ImportValue":{"Fn::Join" : ["", ["ec2-subnet-ids-", {"Ref": "Environment"}]]}}]}]},
+        "AvailabilityZone": {"Fn::ImportValue":{"Fn::Join" : ["", ["availability-zone-", {"Ref": "Environment"}]]}},
+        "UserData": {
+          "Fn::Base64" : { "Fn::Join" : ["", [
+            "#!/bin/bash -v \n",
+            "set -e\n",
+            "#Echo the changeId just so that changes to the changeId can drive an update on the autoscaling group\n",
+            "cd /\n",
+            "echo \"",{"Ref": "ChangeId"},"\"\n",
+
+            "#Wait for the EC2s networking to be ready. Not sure why this doesn't happen automatically if your not using an ELB\n",
+            "#sleep 120\n",
+
+            "#Install some artifacts\n",
+            "yum install -y java-17-amazon-corretto-headless\n",
+
+            "#Download the deployment artifacts\n",
+            "aws s3 cp s3://",{"Ref": "DeploymentBucket"}," ./ --recursive\n",
+            "echo \"copy has been executed!!!\"",
+            "#Setup log rotation\n",
+            "mv app.conf /etc/logrotate.d\n",
+            "logrotate /etc/logrotate.d/app.conf\n",
+            "echo \"Log rotation configured!!!\"",
+
+            "#install app as a service just in case the server goes down before its noticed\n",
+            "mv app.service app\n",
+            "chmod +x app\n",
+            "mv app /etc/init.d\n",
+            "chkconfig --add app\n",
+
+            "# All done so signal success back to AWS to complete the stack creation/update process\n",
+            "/opt/aws/bin/cfn-signal -e 0 --stack ", { "Ref": "AWS::StackName" }, " --resource AutoScalingGroup;\n",
+
+            "sh /run-app.sh\n"
+          ]]}
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ChangeId": {
+      "Description": "This is the source control commit id of the last change on this project. Any time this value is changed the userData section of this stack will be recreated.",
+      "Value": {"Ref": "ChangeId"}
+    }
+  }
+}
