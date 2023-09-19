@@ -21,7 +21,6 @@ import java.util.*
 /**
  * Created by Usman Mutawakil on 2020-04-02.
  */
-@Component
 @Entity
 @Table(name = "intra_day_stock_record")
 class IntraDayStockRecord {
@@ -32,6 +31,8 @@ class IntraDayStockRecord {
 
     @Column
     private val ticker: String
+    @Column
+    private val runNum: Int
     @Column
     private val price: Double
     @Column
@@ -71,6 +72,7 @@ class IntraDayStockRecord {
 
     constructor(
             ticker: String,
+            runNum: Int,
             price: Double,
             vwap: Double,
             openPrice: Double,
@@ -91,6 +93,7 @@ class IntraDayStockRecord {
             creationDate: Date
     ) {
         this.ticker                 = ticker
+        this.runNum                 = runNum
         this.price                  = price
         this.vwap                   = vwap
         this.openPrice              = openPrice
@@ -113,9 +116,9 @@ class IntraDayStockRecord {
 
     @Component
     class SpringAdapter(
-        @Autowired private val applicationProperties: ApplicationProperties,
+        @Autowired private val applicationProperties        : ApplicationProperties,
         @Autowired private val intraDayStockRecordRepository: IntraDayStockRecordRepository,
-        @Autowired private val loggingService: LoggingService
+        @Autowired private val loggingService               : LoggingService
     ) {
         @PostConstruct
         fun init() {
@@ -131,7 +134,8 @@ class IntraDayStockRecord {
         private lateinit var applicationProperties          : ApplicationProperties
         private lateinit var intraDayStockRecordRepository  : IntraDayStockRecordRepository
         private lateinit var loggingService                 : LoggingService
-        private val          stockMap: MutableMap<String, IntraDayStockRecord> = HashMap()
+        private val          stockMap                       : MutableMap<String, IntraDayStockRecord> = HashMap()
+        private var          runNumber                      : Int                                     = 0
 
         fun downloadContinuously(
             intraDayMarketWebService: IntraDayMarketWebService
@@ -139,7 +143,6 @@ class IntraDayStockRecord {
             while(true) {
                 if (isMarketOpen()) {
                     val start = System.currentTimeMillis()
-                    loggingService.log("Market is open")
                     try {
                         download(
                             date = Date(System.currentTimeMillis()),
@@ -151,16 +154,23 @@ class IntraDayStockRecord {
                         loggingService.log("Download failed. Sending push notification................")
                         ex.printStackTrace()
                     }
-                    val timeDiff = (System.currentTimeMillis() - start)
-                    loggingService.log("Ingestion time: " + ((timeDiff/1000)/60))
+                    val timeDiff      = (System.currentTimeMillis() - start)
+                    val ingestionTime = timeDiff/1000
+                    loggingService.log("Ingestion time: $ingestionTime seconds")
                     loggingService.log("Waiting...")
 
-                    Thread.sleep((1000L * 60 * applicationProperties.pollIntervalMins) - timeDiff)
-                    loggingService.log("Wait time: " + (((System.currentTimeMillis() - start)/1000L)/60))
+                    val sleepTime = (1000L * 60 * applicationProperties.pollIntervalMins) - timeDiff
+                    if (sleepTime < 0) {
+                        /** TODO: This means polygon api took longer and/or ingestion process took longer than 5 minutes **/
+                        loggingService.log("Skipping wait. Ingestion time: ${ingestionTime/60} mins")
+                    } else {
+                        Thread.sleep(sleepTime)
+                        loggingService.log("Wait time: " + (((System.currentTimeMillis() - start) / 1000L) / 60))
+                    }
 
 
                 } else {
-                    loggingService.log("Market is closed")
+                    loggingService.log("Market is closed. Waiting but will try again in ${applicationProperties.pollIntervalMins}")
                     Thread.sleep(1000L*60*applicationProperties.pollIntervalMins)
                 }
             }
@@ -212,6 +222,11 @@ class IntraDayStockRecord {
                         if(price > previousRecord.price) {
                             increasing = true
                         }
+                        /** Is it even possible to have a price of zero on the stock market? Lol. This is here to prevent divide by zero
+                         * error, but perhaps it's unnecessary. That being said, what happens to penny stocks before they are de-listed...
+                         *
+                         * Update: Stock ticker FIAC has a price of zero on the day of this writing.
+                         * **/
                         if(previousRecord.price != 0.0) {
                             priceDelta = ((price - previousRecord.price) / previousRecord.price) * 100.0
                         }
@@ -221,6 +236,7 @@ class IntraDayStockRecord {
                     val newRecord = save(
                         IntraDayStockRecord(
                             ticker                 = ticker,
+                            runNum                 = runNumber,
                             price                  = price,
                             vwap                   = Etl.double((r["min"] as JSONObject)["vw"]),
                             openPrice              = Etl.double((r["day"] as JSONObject)["o"]),
@@ -253,6 +269,7 @@ class IntraDayStockRecord {
                     }
                 }
             }
+            runNumber++
         }
 
         @Component

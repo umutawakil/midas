@@ -20,7 +20,7 @@ class LoggingService {
 
     fun error(exception: Exception) {
         exception.printStackTrace()
-        logger.error(exception.message)
+        logger.error(exception.message, exception)
     }
 
     fun securityLog(message: String) {
