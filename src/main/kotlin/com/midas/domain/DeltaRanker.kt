@@ -3,7 +3,7 @@ package com.midas.domain
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
-class IntraDayDeltaRanker {
+class DeltaRanker {
     companion object {
         //TODO: ALl the core object classes need to be loaded from the database so the system can pick up
         //  where it left off
@@ -26,11 +26,15 @@ class IntraDayDeltaRanker {
 
             currentOffset++
 
-            latestRankings.sortByDescending { it.propabilityCoefficient }
+            //latestRankings.sortByDescending { it.propabilityCoefficient }
             return latestRankings
         }
 
         private fun rank(ticker: String, price: Double) {
+            if(price <=0) {
+                return
+            }
+
             val tickerGroup = tickerGroups.computeIfAbsent(
                 ticker,
             ) {
@@ -102,16 +106,17 @@ class IntraDayDeltaRanker {
                 //println("Adding new delta from empty recordBreakers -> NewDelta: $newDelta")
                 recordBreakers.push(
                         PriceDelta(
-                        value  = newDelta,
-                        offset = currentOffset
+                        value         = newDelta,
+                        offset        = currentOffset
                     )
                 )
                 latestRankings.add(
                     DeltaRanking(
-                        ticker     = ticker,
-                        priceDelta = newDelta,
-                        timeWindow = size,
-                        distance   = currentOffset
+                        ticker            = ticker,
+                        priceDelta        = newDelta,
+                        rankChangePercent = 0.0,
+                        timeWindow        = size,
+                        distance          = currentOffset
                     )
                 )
                 return
@@ -132,10 +137,11 @@ class IntraDayDeltaRanker {
             )
             latestRankings.add(
                 DeltaRanking(
-                    ticker     = ticker,
-                    priceDelta = newDelta,
-                    timeWindow = size,
-                    distance   = lastMax.calculateDistance()
+                    ticker            = ticker,
+                    priceDelta        = newDelta,
+                    rankChangePercent = lastMax.calculateChangePercent(newValue = newDelta),
+                    timeWindow        = size,
+                    distance          = lastMax.calculateDistance()
                 )
             )
         }
@@ -143,10 +149,9 @@ class IntraDayDeltaRanker {
         private class PriceDelta(value: Double, offset: Int) {
             private val value: Double
             private val offset: Int
-
             init {
-                this.value = value
-                this.offset = offset
+                this.value         = value
+                this.offset        = offset
             }
 
             fun isGreater(value: Double) : Boolean {
@@ -160,12 +165,20 @@ class IntraDayDeltaRanker {
             fun calculateDistance() : Int {
                 return currentOffset - this.offset
             }
+
+            fun calculateChangePercent(newValue: Double) : Double {
+                if(this.value == 0.0) {
+                    return 100.0
+                }
+                return ((newValue - this.value) / this.value) * 100
+            }
         }
     }
 
     class DeltaRanking(
         val ticker: String,
         val priceDelta: Double,
+        val rankChangePercent: Double,
         val timeWindow: Int,
         val distance: Int
     ) {

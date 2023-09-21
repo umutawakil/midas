@@ -1,9 +1,8 @@
 package com.midas.jobs
 
 import com.midas.configuration.ApplicationProperties
-import com.midas.domain.IntraDayStockRecord
+import com.midas.domain.StockSnapshot
 import com.midas.interfaces.IntraDayMarketWebService
-import com.midas.repositories.IntraDayStockRecordRepository
 import com.midas.services.LoggingService
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,7 +40,7 @@ class MidasRunner {
             } else {
                 try {
                     loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-                    IntraDayStockRecord.downloadContinuously(
+                    StockSnapshot.downloadContinuously(
                         intraDayMarketWebService = intraDayMarketWebService
                     )
                 } catch(ex: Exception) {

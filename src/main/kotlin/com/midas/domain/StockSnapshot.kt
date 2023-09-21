@@ -22,8 +22,8 @@ import java.util.*
  * Created by Usman Mutawakil on 2020-04-02.
  */
 @Entity
-@Table(name = "intra_day_stock_record")
-class IntraDayStockRecord {
+@Table(name = "stock_snapshot")
+class StockSnapshot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -122,9 +122,9 @@ class IntraDayStockRecord {
     ) {
         @PostConstruct
         fun init() {
-            IntraDayStockRecord.applicationProperties         = applicationProperties
-            IntraDayStockRecord.intraDayStockRecordRepository = intraDayStockRecordRepository
-            IntraDayStockRecord.loggingService                = loggingService
+            StockSnapshot.applicationProperties         = applicationProperties
+            StockSnapshot.intraDayStockRecordRepository = intraDayStockRecordRepository
+            StockSnapshot.loggingService                = loggingService
 
             loggingService.log("IntraDayStockRecord initialized")
         }
@@ -134,7 +134,7 @@ class IntraDayStockRecord {
         private lateinit var applicationProperties          : ApplicationProperties
         private lateinit var intraDayStockRecordRepository  : IntraDayStockRecordRepository
         private lateinit var loggingService                 : LoggingService
-        private val          stockMap                       : MutableMap<String, IntraDayStockRecord> = HashMap()
+        private val          stockMap                       : MutableMap<String, StockSnapshot> = HashMap()
         private var          runNumber                      : Int                                     = 0
 
         fun downloadContinuously(
@@ -196,8 +196,8 @@ class IntraDayStockRecord {
             intraDayMarketWebService: IntraDayMarketWebService
         ) {
             ingest(
-                    currentDate     = date,
-                    stockRecords    = intraDayMarketWebService.downloadRecords()["tickers"] as JSONArray
+                    currentDate  = date,
+                    stockRecords = intraDayMarketWebService.downloadRecords()["tickers"] as JSONArray
             )
         }
         private fun ingest(
@@ -209,12 +209,19 @@ class IntraDayStockRecord {
             for(i in 0 until stockRecords.size) {
                 val r = stockRecords[i] as JSONObject
                 try {
+                    if((r["prevDay"] == null ||(r["todaysChange"] == null))) {
+                        continue
+                    }
+
                     val previousDayClose  = Etl.double((r["prevDay"] as JSONObject)["c"])
                     val todaysChange      = Etl.double((r["todaysChange"]))
                     val ticker            = r["ticker"] as String
                     val price             = Etl.double(previousDayClose + todaysChange)
+                    if (price < 1) {
+                        continue
+                    }
 
-                    val previousRecord: IntraDayStockRecord? = stockMap[ticker]
+                    val previousRecord: StockSnapshot? = stockMap[ticker]
                     var increasing = false
                     var priceDelta = 0.0
                     var timeDiffMins = 0
@@ -234,7 +241,7 @@ class IntraDayStockRecord {
                     }
 
                     val newRecord = save(
-                        IntraDayStockRecord(
+                        StockSnapshot(
                             ticker                 = ticker,
                             runNum                 = runNumber,
                             price                  = price,
@@ -292,7 +299,7 @@ class IntraDayStockRecord {
             printWriter.close()
         }
 
-        private fun save(record: IntraDayStockRecord) : IntraDayStockRecord {
+        private fun save(record: StockSnapshot) : StockSnapshot {
             return intraDayStockRecordRepository.save(record)
         }
 
@@ -307,7 +314,7 @@ class IntraDayStockRecord {
         fun validateEntry(
             date: Date,
             position: Int,
-            referenceEntry: IntraDayStockRecord
+            referenceEntry: StockSnapshot
         )  {
             val recordToValidate = intraDayStockRecordRepository.findAllByCreationDate(creationDate = date)[position]
             DomainValueCompareUtil.equalInValue(

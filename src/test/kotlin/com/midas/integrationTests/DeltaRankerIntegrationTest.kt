@@ -1,10 +1,10 @@
 package com.midas.integrationTests
 
-import com.midas.domain.IntraDayDeltaRanker
+import com.midas.domain.DeltaRanker
 import org.junit.jupiter.api.*
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class IntraDayDeltaRankerIntegrationTest {
+class DeltaRankerIntegrationTest {
     @Order(0)
     @Test
     fun Can_rank_record_breaking_positive_deltas() {
@@ -18,11 +18,11 @@ class IntraDayDeltaRankerIntegrationTest {
         val population: Array<Double> = Array(initialPopulationSize) {1.0}
 
         /** Set a spike that the new spike will overtake **/
-        population[distance] = population[5]*( 1.0 + (25.0/100.0))
+        population[distance] = ( 1.0 + (25.0/100.0))
 
         /** Populate the ranker **/
         for(i in population.indices) {
-            val result = IntraDayDeltaRanker.rank(
+            val result = DeltaRanker.rank(
                 stocks = listOf(Pair(ticker,population[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -34,19 +34,19 @@ class IntraDayDeltaRankerIntegrationTest {
         }
 
         /** Rank the deltas in the population **/
-        val rankings: List<IntraDayDeltaRanker.DeltaRanking> = IntraDayDeltaRanker.rank(
+        val rankings: List<DeltaRanker.DeltaRanking> = DeltaRanker.rank(
             stocks = listOf(Pair(ticker,price))
-        )
+        ).sortedByDescending { it.propabilityCoefficient }
 
         println("Rankings:")
         rankings.forEach {
-            println("r -> ticker: ${it.ticker}, priceDelta: ${it.priceDelta}, distance: ${it.distance}, timeWindow: ${it.timeWindow}")
+            println("r -> ticker: ${it.ticker}, priceDelta: ${it.priceDelta}, distance: ${it.distance}, timeWindow: ${it.timeWindow}, rankDelta: ${it.rankChangePercent}")
         }
 
         /** With initialPopulationSize = 19 the only time windows are 2,5,10, and 15
          * For the placement of the test spikes the deltas correspond the following arbitrary values
          * **/
-        val ranking1 : IntraDayDeltaRanker.DeltaRanking = rankings[0]
+        val ranking1 : DeltaRanker.DeltaRanking = rankings[0]
         Assertions.assertEquals(9, ranking1.distance)
         Assertions.assertEquals(newPriceDelta, ranking1.priceDelta)
         Assertions.assertEquals(10, ranking1.timeWindow)
@@ -54,10 +54,11 @@ class IntraDayDeltaRankerIntegrationTest {
 
         /** Now add another point that suddenly jumps 200% from the previous. Because that will make N 21 points long the 20 pt timewindow should kick in as well as a 2 pt of the
          * large jump **/
-        val rankings2: List<IntraDayDeltaRanker.DeltaRanking> = IntraDayDeltaRanker.rank(stocks = listOf(Pair(ticker,4.50)))
+        val rankings2: List<DeltaRanker.DeltaRanking> = DeltaRanker.rank(stocks = listOf(Pair(ticker,4.50))).sortedByDescending { it.propabilityCoefficient }
+
         println("Rankings 2")
         rankings.forEach {
-            println("r -> ticker: ${it.ticker}, priceDelta: ${it.priceDelta}, distance: ${it.distance}, timeWindow: ${it.timeWindow}")
+            println("r -> ticker: ${it.ticker}, priceDelta: ${it.priceDelta}, distance: ${it.distance}, timeWindow: ${it.timeWindow}, rankDelta: ${it.rankChangePercent}")
         }
 
         Assertions.assertEquals(20, rankings2[0].distance)
@@ -78,15 +79,15 @@ class IntraDayDeltaRankerIntegrationTest {
     @Order(1)
     @Test
     fun Will_not_rank_negative_deltas() {
-        IntraDayDeltaRanker.clearAllDataOnlyForIntegrationTests()
+        DeltaRanker.clearAllDataOnlyForIntegrationTests()
 
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(14) {1.0}
-        populationApple[1] = -12.0
+        populationApple[1] = 0.05
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = IntraDayDeltaRanker.rank(
+            val result = DeltaRanker.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -101,19 +102,19 @@ class IntraDayDeltaRankerIntegrationTest {
     @Order(2)
     @Test
     fun Can_rank_with_multiple_tickers() {
-        IntraDayDeltaRanker.clearAllDataOnlyForIntegrationTests()
+        DeltaRanker.clearAllDataOnlyForIntegrationTests()
 
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(14) {1.0}
-        populationApple[1] = -12.0
+        populationApple[1] = 12.0
 
         /** Create a population for TSLA **/
         val populationTesla: Array<Double> = Array(14) {1.0}
-        populationTesla[1] = -12.0
+        populationTesla[1] = 12.0
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = IntraDayDeltaRanker.rank(
+            val result = DeltaRanker.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]),Pair("TSLA",populationTesla[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -123,9 +124,10 @@ class IntraDayDeltaRankerIntegrationTest {
                 }
             }
         }
-        val results = IntraDayDeltaRanker.rank(
+        val results = DeltaRanker.rank(
             stocks = listOf(Pair("AAPL",100.0),Pair("TSLA",100.0))
-        )
+        ).sortedByDescending { it.propabilityCoefficient }
+
         for (r in results) {
             println("ticker: ${r.ticker}, delta: ${r.priceDelta}, probability: ${r.propabilityCoefficient}, window: ${r.timeWindow}, distance: ${r.distance}")
         }
@@ -143,19 +145,19 @@ class IntraDayDeltaRankerIntegrationTest {
     @Order(3)
     @Test
     fun Can_rank_with_multiple_tickers_on_larger_data_sets() {
-        IntraDayDeltaRanker.clearAllDataOnlyForIntegrationTests()
+        DeltaRanker.clearAllDataOnlyForIntegrationTests()
 
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(10000) {1.0}
-        populationApple[1] = -12.0
+        populationApple[1] = 12.0
 
         /** Create a population for TSLA **/
         val populationTesla: Array<Double> = Array(10000) {1.0}
-        populationTesla[1] = -12.0
+        populationTesla[1] = 12.0
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = IntraDayDeltaRanker.rank(
+            val result = DeltaRanker.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]),Pair("TSLA",populationTesla[i]))
             )
             if (result.isNotEmpty()) {
@@ -164,9 +166,9 @@ class IntraDayDeltaRankerIntegrationTest {
                 }
             }
         }
-        val results = IntraDayDeltaRanker.rank(
+        val results = DeltaRanker.rank(
             stocks = listOf(Pair("AAPL",100.0),Pair("TSLA",100.0))
-        )
+        ).sortedByDescending { it.propabilityCoefficient }
 
         for(i in 0 until 13) {
             Assertions.assertEquals(results[(i*2) + 1].timeWindow, results[i*2].timeWindow)
@@ -176,5 +178,24 @@ class IntraDayDeltaRankerIntegrationTest {
             Assertions.assertNotEquals(results[(i*2) + 1].ticker, results[i*2].ticker)
         }
         Assertions.assertEquals(26, results.size)
+    }
+
+    @Order(4)
+    @Test
+    fun Will_not_rank_zero_prices() {
+        DeltaRanker.clearAllDataOnlyForIntegrationTests()
+
+        /** Create a population for AAPL**/
+        val populationApple: Array<Double> = Array(14) {0.0}
+        populationApple[1] = 0.0
+
+        /** Populate the ranker and assert it records no negative deltas **/
+        for(i in populationApple.indices) {
+            val result = DeltaRanker.rank(
+                stocks = listOf(Pair("AAPL",populationApple[i]))
+            )
+            Assertions.assertTrue(result.isEmpty())
+            println("pt: $i, rankings: ${result.size}")
+        }
     }
 }
