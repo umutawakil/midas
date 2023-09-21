@@ -43,10 +43,6 @@ class DeltaRanker {
             tickerGroup.rank(price = price)
         }
 
-        fun getLatestRankings(): List<DeltaRanking> {
-            return latestRankings
-        }
-
         /** If this ever makes it into production I'm sure it will be because of autocomplete **/
         fun clearAllDataOnlyForIntegrationTests() {
             latestRankings.clear()
@@ -114,6 +110,7 @@ class DeltaRanker {
                     DeltaRanking(
                         ticker            = ticker,
                         priceDelta        = newDelta,
+                        price             = price,
                         rankChangePercent = 0.0,
                         timeWindow        = size,
                         distance          = currentOffset
@@ -139,6 +136,7 @@ class DeltaRanker {
                 DeltaRanking(
                     ticker            = ticker,
                     priceDelta        = newDelta,
+                    price             = price,
                     rankChangePercent = lastMax.calculateChangePercent(newValue = newDelta),
                     timeWindow        = size,
                     distance          = lastMax.calculateDistance()
@@ -177,6 +175,7 @@ class DeltaRanker {
 
     class DeltaRanking(
         val ticker: String,
+        val price: Double,
         val priceDelta: Double,
         val rankChangePercent: Double,
         val timeWindow: Int,
