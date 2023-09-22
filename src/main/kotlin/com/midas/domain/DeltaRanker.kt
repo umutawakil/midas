@@ -9,24 +9,23 @@ class DeltaRanker {
         //  where it left off
         // Needs a comparator for decreasing and magnitude
 
-        private val latestRankings = mutableListOf<DeltaRanking>()
+        private val latestRankings = mutableListOf<PriceChangeMilestone>()
         private val tickerGroups   = mutableMapOf<String, TickerGroup>()
 
         //TODO: Needs to be initialized from the database or size of StockPriceInfo
-        private var currentOffset = 0
+        private var currentOffset = 0L
 
-        fun rank(stocks: List<Pair<String, Double>>): List<DeltaRanking> {
+        fun rank(stocks: List<Pair<String, Double>>): List<PriceChangeMilestone> {
             latestRankings.clear()
             stocks.forEach {
                 rank(
                     ticker = it.first,
-                    price = it.second
+                    price  = it.second
                 )
             }
 
             currentOffset++
 
-            //latestRankings.sortByDescending { it.propabilityCoefficient }
             return latestRankings
         }
 
@@ -34,6 +33,8 @@ class DeltaRanker {
             if(price <=0) {
                 return
             }
+
+            //TODO: if no entry exists for ticker then load a queue for each ticker with each queue representing a window
 
             val tickerGroup = tickerGroups.computeIfAbsent(
                 ticker,
@@ -47,38 +48,36 @@ class DeltaRanker {
         fun clearAllDataOnlyForIntegrationTests() {
             latestRankings.clear()
             tickerGroups.clear()
+            PriceChangeMilestone.clear()
             currentOffset = 0
         }
     }
 
-    private class TickerGroup(ticker: String) {
-        private val ticker: String
-        private val windowGroups: MutableList<WindowGroup> = mutableListOf()
-
-        init {
-            this.ticker = ticker
-            initWindowGroups()
+    private class TickerGroup {
+        private val timeWindowEntries: MutableList<TimeWindowEntry> = mutableListOf()
+        constructor(ticker: String) {
+            initWindowGroups(ticker = ticker)
         }
 
-        fun initWindowGroups() {
-            windowGroups.add(
-                WindowGroup(ticker = ticker, size = 1)
+        fun initWindowGroups(ticker: String) {
+            timeWindowEntries.add(
+                TimeWindowEntry(ticker = ticker, size = 1)
             )
             for (i in 1 until 13) {
-                windowGroups.add(
-                    WindowGroup(ticker = ticker, size = 5 * i)
+                timeWindowEntries.add(
+                    TimeWindowEntry(ticker = ticker, size = 5 * i)
                 )
             }
         }
 
         fun rank(price: Double) {
-            windowGroups.forEach{ it.rank(price = price)}
+            timeWindowEntries.forEach{ it.rank(price = price)}
         }
     }
-    private class WindowGroup(ticker: String, size: Int) {
+    private class TimeWindowEntry(ticker: String, size: Int) {
         val ticker: String
         val size: Int
-        val recordBreakers = Stack<PriceDelta>()
+
         val queue: Queue<Double> = LinkedBlockingQueue()
         init {
             this.size   = size
@@ -98,92 +97,82 @@ class DeltaRanker {
                 return
             }
 
-            if (recordBreakers.empty()) {
-                //println("Adding new delta from empty recordBreakers -> NewDelta: $newDelta")
-                recordBreakers.push(
-                        PriceDelta(
-                        value         = newDelta,
-                        offset        = currentOffset
-                    )
-                )
-                latestRankings.add(
-                    DeltaRanking(
-                        ticker            = ticker,
-                        priceDelta        = newDelta,
-                        price             = price,
-                        rankChangePercent = 0.0,
-                        timeWindow        = size,
-                        distance          = currentOffset
-                    )
-                )
-                return
-            }
-            var lastMax:PriceDelta = recordBreakers.peek()
-
-            if(lastMax.isGreater(value = newDelta)) {
-                //println("skipping spike -> Old value: ${lastMax.value}, NewDelta: $newDelta")
-                return
-            }
-
-            while ((!recordBreakers.empty()) && (!recordBreakers.peek().isGreater(value = newDelta))) {
-                lastMax = recordBreakers.pop()
-            }
-            //println("New delta ($newDelta), oldPrice: $oldPrice, newPrice: $price taking over window(${this.size}) at offset $newOffset from offset: $currentOffset")
-            recordBreakers.push(
-                lastMax.overWriteValue(value = newDelta)
-            )
-            latestRankings.add(
-                DeltaRanking(
-                    ticker            = ticker,
-                    priceDelta        = newDelta,
-                    price             = price,
-                    rankChangePercent = lastMax.calculateChangePercent(newValue = newDelta),
-                    timeWindow        = size,
-                    distance          = lastMax.calculateDistance()
-                )
+            PriceChangeMilestone.updateIfNewMilestone(
+                ticker     = ticker,
+                timeWindow = size,
+                newDelta   = newDelta,
+                price      = price
             )
         }
 
-        private class PriceDelta(value: Double, offset: Int) {
-            private val value: Double
-            private val offset: Int
-            init {
-                this.value         = value
-                this.offset        = offset
-            }
 
-            fun isGreater(value: Double) : Boolean {
-                return this.value > value
-            }
-
-            fun overWriteValue(value: Double) : PriceDelta {
-                return PriceDelta(value = value, offset = offset)
-            }
-
-            fun calculateDistance() : Int {
-                return currentOffset - this.offset
-            }
-
-            fun calculateChangePercent(newValue: Double) : Double {
-                if(this.value == 0.0) {
-                    return 100.0
-                }
-                return ((newValue - this.value) / this.value) * 100
-            }
-        }
     }
-
-    class DeltaRanking(
+    class PriceChangeMilestone(
         val ticker: String,
         val price: Double,
         val priceDelta: Double,
-        val rankChangePercent: Double,
+        val milestoneChange: Double,
         val timeWindow: Int,
-        val distance: Int
+        val distance: Long,
+        val offset: Long
     ) {
-        val propabilityCoefficient: Int
+        val probabilityCoefficient: Long
         init {
-            this.propabilityCoefficient = this.timeWindow * this.distance
+            this.probabilityCoefficient = this.timeWindow * this.distance
+        }
+
+        companion object {
+            private val recordBreakers = Stack<PriceChangeMilestone>()
+
+            fun clear() {
+                this.recordBreakers.clear()
+            }
+
+            fun updateIfNewMilestone(ticker: String, timeWindow: Int, newDelta: Double, price: Double) {
+                if (recordBreakers.empty()) {
+                    //println("Adding new delta from empty recordBreakers -> NewDelta: $newDelta")
+                    val newMilestone = PriceChangeMilestone(
+                        ticker            = ticker,
+                        priceDelta        = newDelta,
+                        price             = price,
+                        milestoneChange   = 0.0,
+                        timeWindow        = timeWindow,
+                        distance          = currentOffset,
+                        offset            = currentOffset
+                    )
+                    recordBreakers.push(newMilestone)
+                    latestRankings.add(newMilestone)
+                    return
+                }
+
+                var lastMax:PriceChangeMilestone = recordBreakers.peek()
+                if(lastMax.priceDelta > newDelta) {
+                    //println("skipping spike -> Old value: ${lastMax.value}, NewDelta: $newDelta")
+                    return
+                }
+
+                while ((!recordBreakers.empty()) && (recordBreakers.peek().priceDelta < newDelta)) {
+                    lastMax = recordBreakers.pop()
+                }
+                //println("New delta ($newDelta), oldPrice: $oldPrice, newPrice: $price taking over window(${this.size}) at offset $newOffset from offset: $currentOffset")
+                val updatedMilestone = PriceChangeMilestone(
+                    ticker            = ticker,
+                    priceDelta        = newDelta,
+                    price             = price,
+                    milestoneChange   = calculateMilestoneChange(newMilestone = newDelta, oldMilestone = lastMax.priceDelta),
+                    timeWindow        = timeWindow,
+                    distance          = currentOffset - lastMax.offset,
+                    offset            = lastMax.offset //TODO: Does this produce the right results if you use a bad offset in tests?
+                )
+                recordBreakers.push(updatedMilestone)
+                latestRankings.add(updatedMilestone)
+            }
+            private fun calculateMilestoneChange(newMilestone: Double, oldMilestone: Double) : Double {
+                if(oldMilestone == 0.0) {
+                    return 0.0 // was 100 but thats going to give false positives
+                }
+                return ((newMilestone - oldMilestone) / oldMilestone) * 100
+            }
         }
     }
 }
