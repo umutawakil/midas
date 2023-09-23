@@ -1,5 +1,6 @@
 package com.midas.domain
 
+import jakarta.persistence.*
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -34,7 +35,9 @@ class DeltaRanker {
                 return
             }
 
-            //TODO: if no entry exists for ticker then load a queue for each ticker with each queue representing a window
+            /** TODO: if no entry exists for ticker then load a queue for each ticker with each queue representing a window
+             *      problem is
+             * **/
 
             val tickerGroup = tickerGroups.computeIfAbsent(
                 ticker,
@@ -54,27 +57,27 @@ class DeltaRanker {
     }
 
     private class TickerGroup {
-        private val timeWindowEntries: MutableList<TimeWindowEntry> = mutableListOf()
+        private val timeWindows: MutableList<TimeWindow> = mutableListOf()
         constructor(ticker: String) {
             initWindowGroups(ticker = ticker)
         }
 
         fun initWindowGroups(ticker: String) {
-            timeWindowEntries.add(
-                TimeWindowEntry(ticker = ticker, size = 1)
+            timeWindows.add(
+                TimeWindow(ticker = ticker, size = 2)
             )
             for (i in 1 until 13) {
-                timeWindowEntries.add(
-                    TimeWindowEntry(ticker = ticker, size = 5 * i)
+                timeWindows.add(
+                    TimeWindow(ticker = ticker, size = 5 * i)
                 )
             }
         }
 
         fun rank(price: Double) {
-            timeWindowEntries.forEach{ it.rank(price = price)}
+            timeWindows.forEach{ it.rank(price = price)}
         }
     }
-    private class TimeWindowEntry(ticker: String, size: Int) {
+    private class TimeWindow(ticker: String, size: Int) {
         val ticker: String
         val size: Int
 
@@ -82,16 +85,18 @@ class DeltaRanker {
         init {
             this.size   = size
             this.ticker = ticker
+
+            //TODO: static repository loads up the queue from TimeWindowEntries
         }
 
         fun rank(price: Double) {
+            queue.add(price)
             if(queue.size < size) {
-                queue.add(price)
                 return
             }
 
             val oldPrice = queue.remove()
-            queue.add(price)
+            //queue.add(price)
             val newDelta = ((price - oldPrice)/oldPrice) * 100.0
             if(newDelta < 0) {
                 return
@@ -103,6 +108,26 @@ class DeltaRanker {
                 newDelta   = newDelta,
                 price      = price
             )
+        }
+
+        @Entity(name="TimeWindowEntry")
+        @Table(name="time_window_entry")
+        private class TimeWindowEntry {
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            @Column
+            private val id = -1
+            @Column
+            private val ticker: String
+            @Column
+            val size: Int
+            @Column
+            val price: Double
+            constructor(ticker: String, size: Int, price: Double) {
+                this.ticker = ticker
+                this.size   = size
+                this.price  = price
+            }
         }
 
 
@@ -122,14 +147,22 @@ class DeltaRanker {
         }
 
         companion object {
-            private val recordBreakers = Stack<PriceChangeMilestone>()
+            //TODO: Put into a map, initialze by loading up the whole table.
+            private val milestonesByTickerAndWindow: MutableMap<String, Stack<PriceChangeMilestone>> = HashMap()
 
             fun clear() {
-                this.recordBreakers.clear()
+                this.milestonesByTickerAndWindow.clear()
+            }
+
+            init {
+
+
+
             }
 
             fun updateIfNewMilestone(ticker: String, timeWindow: Int, newDelta: Double, price: Double) {
-                if (recordBreakers.empty()) {
+                val milestones = milestonesByTickerAndWindow.computeIfAbsent("$ticker-$timeWindow") {Stack<PriceChangeMilestone>()}
+                if (milestones.empty()) {
                     //println("Adding new delta from empty recordBreakers -> NewDelta: $newDelta")
                     val newMilestone = PriceChangeMilestone(
                         ticker            = ticker,
@@ -140,19 +173,23 @@ class DeltaRanker {
                         distance          = currentOffset,
                         offset            = currentOffset
                     )
-                    recordBreakers.push(newMilestone)
+                    milestones.push(newMilestone)
                     latestRankings.add(newMilestone)
                     return
                 }
 
-                var lastMax:PriceChangeMilestone = recordBreakers.peek()
-                if(lastMax.priceDelta > newDelta) {
-                    //println("skipping spike -> Old value: ${lastMax.value}, NewDelta: $newDelta")
+                var lastMax:PriceChangeMilestone = milestones.peek()
+                /*println("Last delta: ${lastMax.priceDelta}, new: $newDelta")
+                if(lastMax.priceDelta != newDelta) {
+                    println("Not equal: ${lastMax.priceDelta} and $newDelta")
+                }*/
+                if(lastMax.priceDelta >= newDelta) {
+                    //println("skipping spike -> Old value: ${lastMax.priceDelta}, NewDelta: $newDelta")
                     return
                 }
 
-                while ((!recordBreakers.empty()) && (recordBreakers.peek().priceDelta < newDelta)) {
-                    lastMax = recordBreakers.pop()
+                while ((!milestones.empty()) && (milestones.peek().priceDelta < newDelta)) {
+                    lastMax = milestones.pop()
                 }
                 //println("New delta ($newDelta), oldPrice: $oldPrice, newPrice: $price taking over window(${this.size}) at offset $newOffset from offset: $currentOffset")
                 val updatedMilestone = PriceChangeMilestone(
@@ -164,7 +201,7 @@ class DeltaRanker {
                     distance          = currentOffset - lastMax.offset,
                     offset            = lastMax.offset //TODO: Does this produce the right results if you use a bad offset in tests?
                 )
-                recordBreakers.push(updatedMilestone)
+                milestones.push(updatedMilestone)
                 latestRankings.add(updatedMilestone)
             }
             private fun calculateMilestoneChange(newMilestone: Double, oldMilestone: Double) : Double {
@@ -173,6 +210,10 @@ class DeltaRanker {
                 }
                 return ((newMilestone - oldMilestone) / oldMilestone) * 100
             }
+        }
+
+        override fun toString() : String {
+            return "ticker: $ticker, priceDelta: $priceDelta,distance: $distance,timeWindow: $timeWindow,  offset: $offset,  price: $price, milestoneChange: $milestoneChange"
         }
     }
 }
