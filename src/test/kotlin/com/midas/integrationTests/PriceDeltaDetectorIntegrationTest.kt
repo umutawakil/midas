@@ -1,10 +1,18 @@
 package com.midas.integrationTests
 
-import com.midas.domain.DeltaRanker
+import com.midas.domain.PriceDeltaDetector
 import org.junit.jupiter.api.*
+import org.springframework.boot.test.context.SpringBootTest
 
+@SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class DeltaRankerIntegrationTest {
+class PriceDeltaDetectorIntegrationTest {
+    @BeforeEach
+    fun init() {
+        PriceDeltaDetector.windowSizesForTestMode = true
+        PriceDeltaDetector.clearAllDataOnlyForIntegrationTests()
+    }
+
     @Order(0)
     @Test
     fun Can_rank_record_breaking_positive_deltas() {
@@ -22,7 +30,7 @@ class DeltaRankerIntegrationTest {
 
         /** Populate the ranker **/
         for(i in population.indices) {
-            val result = DeltaRanker.rank(
+            val result = PriceDeltaDetector.rank(
                 stocks = listOf(Pair(ticker,population[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -34,7 +42,7 @@ class DeltaRankerIntegrationTest {
         }
 
         /** Rank the deltas in the population **/
-        val rankings: List<DeltaRanker.PriceChangeMilestone> = DeltaRanker.rank(
+        val rankings: List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(
             stocks = listOf(Pair(ticker,price))
         ).sortedByDescending { it.probabilityCoefficient }
 
@@ -46,7 +54,7 @@ class DeltaRankerIntegrationTest {
         /** With initialPopulationSize = 19 the only time windows are 2,5,10, and 15
          * For the placement of the test spikes the deltas correspond the following arbitrary values
          * **/
-        val ranking1 : DeltaRanker.PriceChangeMilestone = rankings[0]
+        val ranking1 : PriceDeltaDetector.PriceChangeMilestone = rankings[0]
         Assertions.assertEquals(19, ranking1.distance)
         Assertions.assertEquals(newPriceDelta, ranking1.priceDelta)
         Assertions.assertEquals(20, ranking1.timeWindow)
@@ -54,7 +62,7 @@ class DeltaRankerIntegrationTest {
 
         /** Now add another point that suddenly jumps 200% from the previous. Because that will make N 21 points long the 20 pt timewindow should kick in as well as a 2 pt of the
          * large jump **/
-        val rankings2: List<DeltaRanker.PriceChangeMilestone> = DeltaRanker.rank(stocks = listOf(Pair(ticker,4.50))).sortedByDescending { it.probabilityCoefficient }
+        val rankings2: List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(stocks = listOf(Pair(ticker,4.50))).sortedByDescending { it.probabilityCoefficient }
 
         println("Rankings 2")
         rankings2.forEach {
@@ -79,15 +87,13 @@ class DeltaRankerIntegrationTest {
     @Order(1)
     @Test
     fun Will_not_rank_negative_deltas() {
-        DeltaRanker.clearAllDataOnlyForIntegrationTests()
-
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(14) {1.0}
         populationApple[1] = 0.05
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = DeltaRanker.rank(
+            val result = PriceDeltaDetector.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -102,7 +108,9 @@ class DeltaRankerIntegrationTest {
     @Order(2)
     @Test
     fun Can_rank_with_multiple_tickers_on_larger_data_sets() {
-        DeltaRanker.clearAllDataOnlyForIntegrationTests()
+        PriceDeltaDetector.windowSizesForTestMode = false
+
+        val start = System.currentTimeMillis()
 
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(10000) {1.0}
@@ -114,7 +122,8 @@ class DeltaRankerIntegrationTest {
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = DeltaRanker.rank(
+            println("insert: $i")
+            val result = PriceDeltaDetector.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]),Pair("TSLA",populationTesla[i]))
             )
             if (result.isNotEmpty()) {
@@ -123,32 +132,32 @@ class DeltaRankerIntegrationTest {
                 }
             }
         }
-        val results = DeltaRanker.rank(
+        val results = PriceDeltaDetector.rank(
             stocks = listOf(Pair("AAPL",100.0),Pair("TSLA",100.0))
         ).sortedByDescending { it.probabilityCoefficient }
 
-        for(i in 0 until 13) {
+        /*for(i in 0 until 13) {
             Assertions.assertEquals(results[(i*2) + 1].timeWindow, results[i*2].timeWindow)
             Assertions.assertEquals(results[(i*2) + 1].priceDelta, results[i*2].priceDelta)
             Assertions.assertEquals(results[(i*2) + 1].distance, results[i*2].distance)
             Assertions.assertEquals(results[(i*2) + 1].probabilityCoefficient, results[i*2].probabilityCoefficient)
             Assertions.assertNotEquals(results[(i*2) + 1].ticker, results[i*2].ticker)
         }
-        Assertions.assertEquals(26, results.size)
+        Assertions.assertEquals(26, results.size)*/
+        println("X: " + ((System.currentTimeMillis() - start)/1000))
+        fail("Done")
     }
 
     @Order(3)
     @Test
     fun Will_not_rank_zero_prices() {
-        DeltaRanker.clearAllDataOnlyForIntegrationTests()
-
         /** Create a population for AAPL**/
         val populationApple: Array<Double> = Array(14) {0.0}
         populationApple[1] = 0.0
 
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
-            val result = DeltaRanker.rank(
+            val result = PriceDeltaDetector.rank(
                 stocks = listOf(Pair("AAPL",populationApple[i]))
             )
             Assertions.assertTrue(result.isEmpty())
@@ -159,18 +168,16 @@ class DeltaRankerIntegrationTest {
     @Order(4)
     @Test
     fun can_process_multiple_tickers_with_varying_milestones_each() {
-        DeltaRanker.clearAllDataOnlyForIntegrationTests()
-
         val tickerA = "AAPL"
         val tickerB = "TSLA"
 
         /** AAPL -> 1,2
          * TSLA  -> 1,3
          * **/
-        DeltaRanker.rank(
+        PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA,1.0),Pair(tickerB,1.0))
         )
-        val result = DeltaRanker.rank(
+        val result = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA,2.0),Pair(tickerB,3.0))
         )
         for(r in result) {
@@ -200,8 +207,7 @@ class DeltaRankerIntegrationTest {
         /** AAPL -> 1,2,7
          * TSLA  -> 1,3,7
          * **/
-         var result2:List<DeltaRanker.PriceChangeMilestone> = emptyList()
-        result2 = DeltaRanker.rank(
+         var result2:List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         println("r2(0) -> ${result2[0]}")
@@ -215,7 +221,7 @@ class DeltaRankerIntegrationTest {
         /** AAPL -> 1,2,7,7
          * TSLA  -> 1,3,7,7
          * **/
-        result2 = DeltaRanker.rank(
+        result2 = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         Assertions.assertTrue(result2.isEmpty())
@@ -223,7 +229,7 @@ class DeltaRankerIntegrationTest {
         /** AAPL -> 1,2,7,7,7
          * TSLA  -> 1,3,7,7,7
          * **/
-        result2 = DeltaRanker.rank(
+        result2 = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         println("r2(0) -> ${result2[0]}")
@@ -237,7 +243,7 @@ class DeltaRankerIntegrationTest {
         /** AAPL -> 1,2,7,7,7,14
          * TSLA  -> 1,3,7,7,7,14
          * **/
-        val result3 = DeltaRanker.rank(
+        val result3 = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA, 14.0), Pair(tickerB, 14.0))
         )
         /** The jump to 14 is 100% for window = 5 but the previous window=5 had a jump of 1-7 so its already taken **/
@@ -247,7 +253,7 @@ class DeltaRankerIntegrationTest {
          * TSLA  -> 1,3,7,7,7,14,2,2,2
          * **/
         repeat(3) {
-            Assertions.assertTrue(DeltaRanker.rank(
+            Assertions.assertTrue(PriceDeltaDetector.rank(
                 stocks = listOf(Pair(tickerA, 1.0), Pair(tickerB, 2.0))
             ).isEmpty())
         }
@@ -255,7 +261,7 @@ class DeltaRankerIntegrationTest {
         /** AAPL -> 1,2,7,7,7,14,1,1,1
          * TSLA  -> 1,3,7,7,7,14,2,2,2
          * **/
-        var resultg = DeltaRanker.rank(
+        var resultg = PriceDeltaDetector.rank(
                 stocks = listOf(Pair(tickerA, 1.0), Pair(tickerB, 2.0))
             )
         println("resultg[0]: ${resultg[0]}")
@@ -279,7 +285,7 @@ class DeltaRankerIntegrationTest {
          * TSLA  -> 1,3,7,7,7,14,2,2,2,2,98
          * **/
         println("")
-        val result4 = DeltaRanker.rank(
+        val result4 = PriceDeltaDetector.rank(
             stocks = listOf(Pair(tickerA, 14.0*5), Pair(tickerB, 14.0*7))
         )
         println("result4: ${result4.size}")

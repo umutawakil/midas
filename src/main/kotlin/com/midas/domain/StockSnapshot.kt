@@ -161,7 +161,7 @@ class StockSnapshot {
 
                     val sleepTime = (1000L * 60 * applicationProperties.pollIntervalMins) - timeDiff
                     if (sleepTime < 0) {
-                        /** TODO: This means polygon api took longer and/or ingestion process took longer than 5 minutes **/
+                        /** This means polygon api took longer and/or ingestion process took longer than 5 minutes **/
                         loggingService.log("Skipping wait. Ingestion time: ${ingestionTime/60} mins")
                     } else {
                         Thread.sleep(sleepTime)
