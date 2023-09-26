@@ -1,8 +1,9 @@
 package com.midas.domain
 
 import com.midas.configuration.ApplicationProperties
+import com.midas.repositories.CurrentSystemOffsetRepository
 import com.midas.repositories.PriceChangeMilestoneRepository
-import com.midas.repositories.TimeWindowEntryRepository
+//import com.midas.repositories.TimeWindowEntryRepository
 import com.midas.services.LoggingService
 import jakarta.annotation.PostConstruct
 import jakarta.persistence.*
@@ -14,47 +15,50 @@ import kotlin.collections.HashMap
 
 class PriceDeltaDetector {
     @Component
-    class SpringAdapter(
+    private class SpringAdapter(
         @Autowired private val applicationProperties        : ApplicationProperties,
         @Autowired private val priceChangeMilestoneRepository: PriceChangeMilestoneRepository,
-        @Autowired private val timeWindowEntryRepository: TimeWindowEntryRepository,
+        @Autowired private val currentSystemOffsetRepository: CurrentSystemOffsetRepository,
         @Autowired private val loggingService               : LoggingService
     ) {
         @PostConstruct
         fun init() {
-            TimeWindow.timeWindowEntryRepository                = timeWindowEntryRepository
+            PriceDeltaDetector.currentSystemOffsetRepository    = currentSystemOffsetRepository
+            PriceDeltaDetector.applicationProperties            = applicationProperties
+            PriceDeltaDetector.loggingService                   = loggingService
             PriceChangeMilestone.priceChangeMilestoneRepository = priceChangeMilestoneRepository
-            PriceDeltaDetector.loggingService                          = loggingService
+
+            CurrentSystemOffset.init()
             PriceChangeMilestone.init()
             TimeWindow.init()
-
             loggingService.log("DeltaRanker initialized")
         }
     }
     companion object {
+        private lateinit var applicationProperties: ApplicationProperties
+        private lateinit var currentSystemOffsetRepository: CurrentSystemOffsetRepository
         private val latestRankings = mutableListOf<PriceChangeMilestone>()
         private val tickerGroups   = mutableMapOf<String, TickerGroup>()
         var windowSizesForTestMode = false
-        lateinit var loggingService: LoggingService
+        private lateinit var loggingService: LoggingService
 
-        var currentSystemOffset = 0L //Inits initialized inside the TimeWindow class
-        private var currentDate: Date? = null
-
-        fun rank(stocks: List<Pair<String, Double>>): List<PriceChangeMilestone> {
+        fun rank(date: Date, stocks: List<Pair<String, Double>>): List<PriceChangeMilestone> {
             latestRankings.clear()
-            currentDate = Date(0)
+
             stocks.forEach {
                 rank(
                     ticker = it.first,
-                    price  = it.second
+                    price  = it.second,
+                    date   = date
                 )
             }
 
-            currentSystemOffset++
+            CurrentSystemOffset.increment()
+            loggingService.log("Ranking completed for ${CurrentSystemOffset.get() - 1}. Starting ranking for offset ${CurrentSystemOffset.get()}")
             return latestRankings
         }
 
-        private fun rank(ticker: String, price: Double) {
+        private fun rank(ticker: String, price: Double, date: Date) {
             if(price <=0) {
                 return
             }
@@ -66,16 +70,19 @@ class PriceDeltaDetector {
             ) {
                 TickerGroup(ticker = ticker)
             }
-            tickerGroup.rank(price = price)
+            tickerGroup.rank(price = price, date = date)
         }
 
         /** If this ever makes it into production I'm sure it will be because of autocomplete **/
         fun clearAllDataOnlyForIntegrationTests() {
+            if (applicationProperties.isNotIntegrationTest) {
+                throw RuntimeException("Calling clear on delta ranker from outside an integration test")
+            }
             latestRankings.clear()
             tickerGroups.clear()
             PriceChangeMilestone.clear()
             TimeWindow.clear()
-            currentSystemOffset = 0
+            CurrentSystemOffset.clear()
         }
     }
 
@@ -88,7 +95,6 @@ class PriceDeltaDetector {
         fun initWindowGroups(ticker: String) {
             /** Without this the integration tests as they are would be too large and complicated **/
             if(windowSizesForTestMode) {
-                loggingService.log("Initializing window groups with test mode settings")
                 timeWindows.add(TimeWindow(ticker = ticker, size = 2))
                 for (i in 1 until 13) {
                     timeWindows.add(
@@ -97,22 +103,32 @@ class PriceDeltaDetector {
                 }
 
             } else {
-                loggingService.log("Initializing window groups normal mode settings")
+                timeWindows.add(
+                    TimeWindow(ticker = ticker, size = 5)
+                )
+                timeWindows.add(
+                    TimeWindow(ticker = ticker, size = 10)
+                )
                 timeWindows.add(
                     TimeWindow(ticker = ticker, size = 15)
                 )
-
                 timeWindows.add(
                     TimeWindow(ticker = ticker, size = 30)
                 )
                 timeWindows.add(
                     TimeWindow(ticker = ticker, size = 60)
                 )
+                timeWindows.add(
+                    TimeWindow(ticker = ticker, size = 120)
+                )
+                timeWindows.add(
+                    TimeWindow(ticker = ticker, size = 180)
+                )
             }
         }
 
-        fun rank(price: Double) {
-            timeWindows.forEach{ it.rank(price = price)}
+        fun rank(price: Double, date: Date) {
+            timeWindows.forEach{ it.rank(price = price, date = date)}
         }
     }
     private class TimeWindow {
@@ -132,90 +148,102 @@ class PriceDeltaDetector {
             }
         }
         companion object {
-            lateinit var timeWindowEntryRepository     : TimeWindowEntryRepository
             var timeWindowEntries: MutableMap<String, MutableList<TimeWindowEntry>> = HashMap()
 
             fun init() {
-                val results: List<TimeWindowEntry> = timeWindowEntryRepository.findAll().toList()
-                initSystemOffset(results)
-
-                for(r in results) {
-                    timeWindowEntries.computeIfAbsent("${r.ticker}-${r.size}"){mutableListOf()}.add(r)
-                }
-            }
-
-            fun initSystemOffset(results: List<TimeWindowEntry>) {
-                if(results.isEmpty()) {
-                    currentSystemOffset = 0L
-                } else {
-                    currentSystemOffset = results[0].currentOffset
-                    for(i in results.indices) {
-                        if(currentSystemOffset < results[i].currentOffset) {
-                            currentSystemOffset = results[i].currentOffset
-                        }
-                    }
-                    currentSystemOffset += 1
-                }
-                loggingService.log("CurrentOffset: ${currentSystemOffset}")
+                loggingService.log("TimeWindow initialized")
             }
 
             fun clear() {
                 timeWindowEntries.clear()
-                timeWindowEntryRepository.deleteAll()
             }
         }
 
-        fun rank(price: Double) {
-            val newEntry = timeWindowEntryRepository.save(
-                TimeWindowEntry(
+        fun rank(price: Double, date: Date) {
+            val newEntry = TimeWindowEntry(
                     ticker        = ticker,
                     size          = size,
                     price         = price,
-                    currentOffset = currentSystemOffset
+                    currentOffset = CurrentSystemOffset.get(),
+                    creationTime  = date
                 )
-            )
+
             queue.add(newEntry)
             if(queue.size < size) {
                 return
             }
 
             val oldPrice = queue.remove()
-            timeWindowEntryRepository.delete(oldPrice)
-            //queue.add(price)
             val newDelta = ((price - oldPrice.price)/oldPrice.price) * 100.0
             if(newDelta < 0) {
                 return
             }
 
             PriceChangeMilestone.updateIfNewMilestone(
-                ticker     = ticker,
-                timeWindow = size,
-                newDelta   = newDelta,
-                price      = price
+                ticker       = ticker,
+                timeWindow   = size,
+                newDelta     = newDelta,
+                price        = price,
+                creationTime = date
             )
         }
     }
 
-    @Entity(name="TimeWindowEntry")
-    @Table(name="time_window_entry")
-    class TimeWindowEntry {
+    @Entity(name="CurrentSystemOffset")
+    @Table(name="current_system_offset")
+    class CurrentSystemOffset {
         @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        val id = 1L
         @Column
-        val id = -1
-        @Column
+        var value: Long
+
+        private constructor(value: Long) {
+            this.value = value
+        }
+
+        companion object {
+            private lateinit var currentSystemOffset: CurrentSystemOffset
+            fun init()  {
+                val results = currentSystemOffsetRepository.findAll().toList()
+                if(results.isNotEmpty()) {
+                    currentSystemOffset = results[0]
+                    return
+                }
+                currentSystemOffset = currentSystemOffsetRepository.save(
+                        CurrentSystemOffset(value = 0)
+                )
+            }
+
+            fun increment() {
+                currentSystemOffset.value++
+                currentSystemOffset = currentSystemOffsetRepository.save(currentSystemOffset)
+            }
+
+            fun get() : Long {
+                return currentSystemOffset.value
+            }
+
+            /** TODO: This is only for testing and should be removed ASAP **/
+            fun clear() {
+                currentSystemOffset.value = 0
+                currentSystemOffset = currentSystemOffsetRepository.save(currentSystemOffset)
+            }
+
+        }
+    }
+
+    class TimeWindowEntry {
         val ticker: String
-        @Column
         val size: Int
-        @Column
         val price: Double
-        @Column
         val currentOffset: Long
-        constructor(ticker: String, size: Int, price: Double, currentOffset: Long) {
+        val creationTime: Date
+        constructor(ticker: String, size: Int, price: Double, currentOffset: Long, creationTime: Date) {
             this.ticker        = ticker
             this.size          = size
             this.price         = price
             this.currentOffset = currentOffset
+            this.creationTime  = creationTime
         }
     }
 
@@ -269,21 +297,25 @@ class PriceDeltaDetector {
             this.creationTime           = creationTime
         }
 
+
+
         companion object {
             private  val milestonesByTickerAndWindow    : MutableMap<String, PriceChangeMilestone> = HashMap()
             lateinit var priceChangeMilestoneRepository : PriceChangeMilestoneRepository
+
             fun init() {
                 val results = priceChangeMilestoneRepository.findAll()
                 for(r in results) {
                     milestonesByTickerAndWindow.computeIfAbsent("${r.ticker}-${r.timeWindow}") {r}
                 }
+                loggingService.log("PriceChangeMilestone initialized")
             }
             fun clear() {
                 this.milestonesByTickerAndWindow.clear()
                 priceChangeMilestoneRepository.deleteAll()
             }
 
-            fun updateIfNewMilestone(ticker: String, timeWindow: Int, newDelta: Double, price: Double) {
+            fun updateIfNewMilestone(ticker: String, timeWindow: Int, newDelta: Double, price: Double, creationTime: Date) {
                 val lastMilestone: PriceChangeMilestone? = milestonesByTickerAndWindow["$ticker-$timeWindow"]
                 if (lastMilestone == null) {
                     val newMilestone = priceChangeMilestoneRepository.save(PriceChangeMilestone(
@@ -292,10 +324,10 @@ class PriceDeltaDetector {
                         price             = price,
                         milestoneChange   = 0.0,
                         timeWindow        = timeWindow,
-                        distance          = currentSystemOffset,
-                        offset            = currentSystemOffset,
-                        currentOffset     = currentSystemOffset,
-                        creationTime      = currentDate!!
+                        distance          = CurrentSystemOffset.get(),
+                        offset            = CurrentSystemOffset.get(),
+                        currentOffset     = CurrentSystemOffset.get(),
+                        creationTime      = creationTime
                     ))
                     milestonesByTickerAndWindow["$ticker-$timeWindow"] = newMilestone
                     priceChangeMilestoneRepository.save(newMilestone)
@@ -303,7 +335,7 @@ class PriceDeltaDetector {
                     return
                 }
 
-                if(lastMilestone.priceDelta >= newDelta) {
+                if (lastMilestone.priceDelta >= newDelta) {
                     return
                 }
 
@@ -313,10 +345,10 @@ class PriceDeltaDetector {
                     price             = price,
                     milestoneChange   = calculateMilestoneChange(newMilestone = newDelta, oldMilestone = lastMilestone.priceDelta),
                     timeWindow        = timeWindow,
-                    distance          = currentSystemOffset - lastMilestone.offset,
+                    distance          = CurrentSystemOffset.get() - lastMilestone.offset,
                     offset            = lastMilestone.offset,
-                    currentOffset     = currentSystemOffset,
-                    creationTime      = currentDate!!
+                    currentOffset     = CurrentSystemOffset.get(),
+                    creationTime      = creationTime
                 )
                 milestonesByTickerAndWindow["$ticker-$timeWindow"] = priceChangeMilestoneRepository.save(updatedMilestone)
                 latestRankings.add(milestonesByTickerAndWindow["$ticker-$timeWindow"]!!)

@@ -3,6 +3,7 @@ package com.midas.integrationTests
 import com.midas.domain.PriceDeltaDetector
 import org.junit.jupiter.api.*
 import org.springframework.boot.test.context.SpringBootTest
+import java.util.*
 
 @SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -31,10 +32,11 @@ class PriceDeltaDetectorIntegrationTest {
         /** Populate the ranker **/
         for(i in population.indices) {
             val result = PriceDeltaDetector.rank(
+                date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair(ticker,population[i]))
             )
             println("pt: $i, rankings: ${result.size}")
-            if (result.size >  0) {
+            if (result.isNotEmpty()) {
                 for(r in result) {
                     println("timeWindow: ${r.timeWindow}, distance: ${r.distance}, delta: ${r.priceDelta}")
                 }
@@ -43,6 +45,7 @@ class PriceDeltaDetectorIntegrationTest {
 
         /** Rank the deltas in the population **/
         val rankings: List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(ticker,price))
         ).sortedByDescending { it.probabilityCoefficient }
 
@@ -62,7 +65,10 @@ class PriceDeltaDetectorIntegrationTest {
 
         /** Now add another point that suddenly jumps 200% from the previous. Because that will make N 21 points long the 20 pt timewindow should kick in as well as a 2 pt of the
          * large jump **/
-        val rankings2: List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(stocks = listOf(Pair(ticker,4.50))).sortedByDescending { it.probabilityCoefficient }
+        val rankings2: List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
+            stocks = listOf(Pair(ticker,4.50))
+        ).sortedByDescending { it.probabilityCoefficient }
 
         println("Rankings 2")
         rankings2.forEach {
@@ -94,6 +100,7 @@ class PriceDeltaDetectorIntegrationTest {
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
             val result = PriceDeltaDetector.rank(
+                date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair("AAPL",populationApple[i]))
             )
             println("pt: $i, rankings: ${result.size}")
@@ -124,6 +131,7 @@ class PriceDeltaDetectorIntegrationTest {
         for(i in populationApple.indices) {
             println("insert: $i")
             val result = PriceDeltaDetector.rank(
+                date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair("AAPL",populationApple[i]),Pair("TSLA",populationTesla[i]))
             )
             if (result.isNotEmpty()) {
@@ -132,11 +140,12 @@ class PriceDeltaDetectorIntegrationTest {
                 }
             }
         }
-        val results = PriceDeltaDetector.rank(
+        /*val results = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair("AAPL",100.0),Pair("TSLA",100.0))
         ).sortedByDescending { it.probabilityCoefficient }
 
-        /*for(i in 0 until 13) {
+        for(i in 0 until 13) {
             Assertions.assertEquals(results[(i*2) + 1].timeWindow, results[i*2].timeWindow)
             Assertions.assertEquals(results[(i*2) + 1].priceDelta, results[i*2].priceDelta)
             Assertions.assertEquals(results[(i*2) + 1].distance, results[i*2].distance)
@@ -145,7 +154,7 @@ class PriceDeltaDetectorIntegrationTest {
         }
         Assertions.assertEquals(26, results.size)*/
         println("X: " + ((System.currentTimeMillis() - start)/1000))
-        fail("Done")
+        //fail("Done")
     }
 
     @Order(3)
@@ -158,6 +167,7 @@ class PriceDeltaDetectorIntegrationTest {
         /** Populate the ranker and assert it records no negative deltas **/
         for(i in populationApple.indices) {
             val result = PriceDeltaDetector.rank(
+                date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair("AAPL",populationApple[i]))
             )
             Assertions.assertTrue(result.isEmpty())
@@ -175,9 +185,11 @@ class PriceDeltaDetectorIntegrationTest {
          * TSLA  -> 1,3
          * **/
         PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA,1.0),Pair(tickerB,1.0))
         )
         val result = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA,2.0),Pair(tickerB,3.0))
         )
         for(r in result) {
@@ -208,6 +220,7 @@ class PriceDeltaDetectorIntegrationTest {
          * TSLA  -> 1,3,7
          * **/
          var result2:List<PriceDeltaDetector.PriceChangeMilestone> = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         println("r2(0) -> ${result2[0]}")
@@ -222,6 +235,7 @@ class PriceDeltaDetectorIntegrationTest {
          * TSLA  -> 1,3,7,7
          * **/
         result2 = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         Assertions.assertTrue(result2.isEmpty())
@@ -230,6 +244,7 @@ class PriceDeltaDetectorIntegrationTest {
          * TSLA  -> 1,3,7,7,7
          * **/
         result2 = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA, 7.0), Pair(tickerB, 7.0))
         )
         println("r2(0) -> ${result2[0]}")
@@ -244,6 +259,7 @@ class PriceDeltaDetectorIntegrationTest {
          * TSLA  -> 1,3,7,7,7,14
          * **/
         val result3 = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA, 14.0), Pair(tickerB, 14.0))
         )
         /** The jump to 14 is 100% for window = 5 but the previous window=5 had a jump of 1-7 so its already taken **/
@@ -254,6 +270,7 @@ class PriceDeltaDetectorIntegrationTest {
          * **/
         repeat(3) {
             Assertions.assertTrue(PriceDeltaDetector.rank(
+                date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair(tickerA, 1.0), Pair(tickerB, 2.0))
             ).isEmpty())
         }
@@ -261,7 +278,8 @@ class PriceDeltaDetectorIntegrationTest {
         /** AAPL -> 1,2,7,7,7,14,1,1,1
          * TSLA  -> 1,3,7,7,7,14,2,2,2
          * **/
-        var resultg = PriceDeltaDetector.rank(
+        val resultg = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
                 stocks = listOf(Pair(tickerA, 1.0), Pair(tickerB, 2.0))
             )
         println("resultg[0]: ${resultg[0]}")
@@ -286,6 +304,7 @@ class PriceDeltaDetectorIntegrationTest {
          * **/
         println("")
         val result4 = PriceDeltaDetector.rank(
+            date   =  Date(System.currentTimeMillis()),
             stocks = listOf(Pair(tickerA, 14.0*5), Pair(tickerB, 14.0*7))
         )
         println("result4: ${result4.size}")

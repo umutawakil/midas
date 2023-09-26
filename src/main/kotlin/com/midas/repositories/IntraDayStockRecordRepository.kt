@@ -8,6 +8,6 @@ import java.util.*
 
 
 interface IntraDayStockRecordRepository: CrudRepository<StockSnapshot, Long> {
-    @Query("SELECT r FROM IntraDayStockRecordRepository r WHERE r.creationDate = :creationDate ORDER BY r.creationDate Asc")
-    fun findAllByCreationDate(creationDate: Date): List<StockSnapshot>
+    @Query("SELECT r FROM IntraDayStockRecordRepository r WHERE r.creationTime = :creationDate ORDER BY r.creationTime Asc")
+    fun findAllByCreationTime(creationTime: Date): List<StockSnapshot>
 }
