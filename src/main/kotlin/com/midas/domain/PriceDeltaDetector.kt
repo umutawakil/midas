@@ -193,25 +193,30 @@ class PriceDeltaDetector {
     @Table(name="current_system_offset")
     class CurrentSystemOffset {
         @Id
-        val id = -1L
+        @Column
+        val id: Long
         @Column
         var value: Long
 
-        private constructor(value: Long) {
+        private constructor(id: Long, value: Long) {
+            this.id    = id
             this.value = value
         }
 
         companion object {
+            @Volatile
             private lateinit var currentSystemOffset: CurrentSystemOffset
             fun init()  {
-                val results = currentSystemOffsetRepository.findAll().toList()
+                val results: List<CurrentSystemOffset> = currentSystemOffsetRepository.findAll().toList()
                 if(results.isNotEmpty()) {
                     currentSystemOffset = results[0]
                     return
                 }
-                currentSystemOffset = currentSystemOffsetRepository.save(
-                        CurrentSystemOffset(value = 0)
-                )
+                loggingService.log("Current offset not found")
+                throw RuntimeException("Current offset not found")
+                /*currentSystemOffset = currentSystemOffsetRepository.save(
+                        CurrentSystemOffset(id = 0, value = 0)
+                )*/
             }
 
             fun increment() {
