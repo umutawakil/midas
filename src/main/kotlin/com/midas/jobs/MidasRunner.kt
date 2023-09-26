@@ -33,7 +33,7 @@ class MidasRunner {
         private lateinit var intraDayMarketWebService: IntraDayMarketWebService
         private lateinit var loggingService: LoggingService
         fun launch() {
-            Thread.sleep(5000)
+            Thread.sleep(10000)
             if(!applicationProperties.isNotIntegrationTest) {
                 loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
                 return

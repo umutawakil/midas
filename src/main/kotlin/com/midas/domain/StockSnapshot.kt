@@ -87,6 +87,7 @@ class StockSnapshot {
         fun downloadContinuously(
             intraDayMarketWebService: IntraDayMarketWebService
         ) {
+            Thread.sleep(3000)
             while(true) {
                 if (isMarketOpen()) {
                     /** Download snapshot data for the price change milestone ranker **/

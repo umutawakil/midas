@@ -114,7 +114,7 @@
             "set -e\n",
             "#Echo the changeId just so that changes to the changeId can drive an update on the autoscaling group\n",
             "cd /\n",
-            "echo \"",{"Ref": "ChangeId"},"\"\n",
+            "echo changeID: \"",{"Ref": "ChangeId"},"\"\n",
 
             "#Wait for the EC2s networking to be ready. Not sure why this doesn't happen automatically if your not using an ELB\n",
             "#sleep 120\n",

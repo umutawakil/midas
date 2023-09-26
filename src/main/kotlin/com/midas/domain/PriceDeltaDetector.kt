@@ -193,7 +193,7 @@ class PriceDeltaDetector {
     @Table(name="current_system_offset")
     class CurrentSystemOffset {
         @Id
-        val id = 1L
+        val id = -1L
         @Column
         var value: Long
 
