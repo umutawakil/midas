@@ -33,7 +33,7 @@ dependencies {
     implementation("joda-time:joda-time:2.10.9")
 
     //testImplementation(kotlin("test"))
-    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+    implementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
     implementation("org.jetbrains.kotlin:kotlin-reflect")

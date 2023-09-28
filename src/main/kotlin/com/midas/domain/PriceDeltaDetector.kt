@@ -353,7 +353,7 @@ class PriceDeltaDetector {
                     distance          = CurrentSystemOffset.get() - lastMilestone.offset,
                     offset            = lastMilestone.offset,
                     currentOffset     = CurrentSystemOffset.get(),
-                    creationTime      = creationTime
+                    creationTime      = creationTime /*TODO: This should have been an update field. Now theres no historical record of when the object was ACTUALLY created!!! **/
                 )
                 milestonesByTickerAndWindow["$ticker-$timeWindow"] = priceChangeMilestoneRepository.save(updatedMilestone)
                 latestRankings.add(milestonesByTickerAndWindow["$ticker-$timeWindow"]!!)

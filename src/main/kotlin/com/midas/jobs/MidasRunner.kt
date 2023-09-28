@@ -21,6 +21,10 @@ class MidasRunner {
             MidasRunner.loggingService           = loggingService
             MidasRunner.intraDayMarketWebService = intraDayMarketWebService
             loggingService.log("MidasRunner initialized")
+            if(!Companion.applicationProperties.isNotIntegrationTest) {
+                Companion.loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
+                return
+            }
 
             Thread {
                 launch()

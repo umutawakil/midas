@@ -1,6 +1,5 @@
 package com.midas.configuration
 
-//import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -8,10 +7,6 @@ import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
 import org.springframework.transaction.PlatformTransactionManager
-/*import org.thymeleaf.spring5.SpringTemplateEngine
-import org.thymeleaf.spring5.view.ThymeleafViewResolver
-import org.thymeleaf.templatemode.TemplateMode
-import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver*/
 import java.util.Properties
 import javax.sql.DataSource
 
@@ -23,32 +18,6 @@ class ApplicationConfiguration(
     @Autowired val dataSource: DataSource,
     @Autowired val applicationProperties: ApplicationProperties
 ) {
-    /*@Bean
-    fun templateResolver() : ClassLoaderTemplateResolver {
-        val secondaryTemplateResolver               =  ClassLoaderTemplateResolver()
-        secondaryTemplateResolver.prefix            = "templates/"
-        secondaryTemplateResolver.suffix            = ".html"
-        secondaryTemplateResolver.templateMode      = TemplateMode.HTML
-        secondaryTemplateResolver.characterEncoding = "UTF-8"
-        return secondaryTemplateResolver
-    }
-
-    @Bean
-    fun templateEngine() : SpringTemplateEngine {
-        val templateEngine = SpringTemplateEngine()
-        templateEngine.setTemplateResolver(templateResolver())
-        templateEngine.enableSpringELCompiler = true
-        templateEngine.addDialect(LayoutDialect())
-        return templateEngine
-    }
-
-    @Bean
-    fun viewResolver() : ThymeleafViewResolver {
-        val viewResolver = ThymeleafViewResolver()
-        viewResolver.templateEngine = templateEngine()
-        return viewResolver
-    }*/
-
     /*@Bean
     fun entityManagerFactory(): LocalContainerEntityManagerFactoryBean {
         val em                 = LocalContainerEntityManagerFactoryBean()
