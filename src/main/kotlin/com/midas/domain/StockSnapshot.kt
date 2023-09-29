@@ -4,7 +4,6 @@ import com.midas.configuration.ApplicationProperties
 import com.midas.interfaces.IntraDayMarketWebService
 import com.midas.repositories.IntraDayStockRecordRepository
 import com.midas.services.LoggingService
-import com.midas.utilities.DomainValueCompareUtil
 import com.midas.utilities.Etl
 import com.midas.utilities.HttpUtility
 import jakarta.annotation.PostConstruct
@@ -93,7 +92,8 @@ class StockSnapshot {
                     /** Download snapshot data for the price change milestone ranker **/
                     downloadAndDetectDeltas(intraDayMarketWebService)
                     loggingService.log("Waiting....")
-                    Thread.sleep(60000)
+                    //Thread.sleep(60000)
+                    Thread.sleep(60000*15)
 
                 } else {
                     if(applicationProperties.runStockSnapshotImport && !dailySnapshotTaken) {
@@ -151,10 +151,20 @@ class StockSnapshot {
                     val jsonResult: JSONArray = intraDayMarketWebService.downloadRecords()["tickers"] as JSONArray
                     var records: MutableList<Pair<String, Double>> = mutableListOf()
                     for (i in jsonResult.indices) {
+                        val prevDayObject = (jsonResult[i] as JSONObject)["prevDay"]
+                        val todaysChangeObject = (jsonResult[i] as JSONObject)["todaysChange"]
+                        if(prevDayObject == null ||todaysChangeObject == null) {
+                            continue
+                        }
+
                         val ticker = (jsonResult[i] as JSONObject)["ticker"] as String
-                        val previousDayClose = Etl.double(((jsonResult[i] as JSONObject)["prevDay"] as JSONObject)["c"])
-                        val todaysChange = Etl.double(((jsonResult[i] as JSONObject)["todaysChange"]))
+                        val previousDayClose = Etl.double((prevDayObject as JSONObject)["c"])
+                        val todaysChange     = Etl.double(todaysChangeObject)
+
                         val price = Etl.double(previousDayClose + todaysChange)
+                        if(price <= 0.0) {
+                            continue
+                        }
                         records.add(
                             Pair(
                                 first = ticker,
@@ -163,7 +173,8 @@ class StockSnapshot {
                         )
                     }
                     loggingService.log("Ranking data.....")
-                    PriceDeltaDetector.rank(date = date, stocks = records)
+                    //PriceDeltaDetector.rank(date = date, stocks = records)
+                    DeltaChain.addDeltas(date = date, stocks = records)
 
                 } catch (ex: Exception) {
                     //TODO: Need to notify me the run failed

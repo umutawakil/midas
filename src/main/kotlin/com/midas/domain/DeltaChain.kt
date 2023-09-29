@@ -24,15 +24,17 @@ class DeltaChain {
     private var chainLength  : Int     = 0
     private var average      : Double? = null
     private var dead         : Boolean = false
+    private val creationTime : Date
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy="deltaChain", cascade = arrayOf(CascadeType.ALL))
     @OrderBy("chainPosition ASC")
     private val deltas: MutableList<Delta>
 
-    constructor(ticker: String, initialPrice: Double) {
+    constructor(date: Date, ticker: String, initialPrice: Double) {
         this.ticker       = ticker
         this.initialPrice = initialPrice
         this.deltas       = mutableListOf()
+        this.creationTime = date
     }
 
     @Component
@@ -60,11 +62,18 @@ class DeltaChain {
         fun init() {
             springAdapter.init()
         }
-        fun add(date: Date, ticker: String, price: Double) {
+
+        fun addDeltas(date: Date, stocks: List<Pair<String, Double>>) {
+            stocks.forEach {
+                addDelta(date = date, ticker = it.first, price = it.second)
+            }
+        }
+        private fun addDelta(date: Date, ticker: String, price: Double) {
             var deltaChain: DeltaChain? = deltaChains[ticker]
             if(deltaChain == null) {
                 deltaChain = save (
                     DeltaChain(
+                        date         = date,
                         ticker       = ticker,
                         initialPrice = price
                     )
@@ -74,7 +83,7 @@ class DeltaChain {
                 if (deltaChain.chainLength == 0) {
                     val tempDelta = ((price - deltaChain.initialPrice) / deltaChain.initialPrice) *100.0
                     if(tempDelta < 0) {
-                        killChain(deltaChain)
+                        killChainAndStartNewChain(chain = deltaChain, lastPrice = price)
                         return
                     }
                     newDelta = Delta(
@@ -86,7 +95,7 @@ class DeltaChain {
                 } else {
                     val tempDelta = ((price - deltaChain.deltas[deltaChain.deltas.size - 1].price)/deltaChain.deltas[deltaChain.deltas.size - 1].price)*100.0
                     if(tempDelta < 0 ) {
-                        killChain(deltaChain)
+                        killChainAndStartNewChain(chain = deltaChain, lastPrice = price)
                         return
                     }
                     newDelta = Delta(
@@ -104,10 +113,13 @@ class DeltaChain {
         private fun save(chain: DeltaChain) : DeltaChain {
             return deltaChainRepository.save(chain)
         }
-        private fun killChain(chain: DeltaChain) {
+        private fun killChainAndStartNewChain(chain: DeltaChain, lastPrice: Double) {
             chain.dead = true
             deltaChains.remove(chain.ticker)
             save(chain)
+
+            /** Start a new chain **/
+            addDelta(date = chain.creationTime, ticker = chain.ticker, price = lastPrice)
         }
     }
 
@@ -119,6 +131,7 @@ class DeltaChain {
         } else {
             this.average = (this.average!! + newDelta.priceDelta) / 2
         }
+        newDelta.chainPosition = this.chainLength
         this.chainLength++
         this.deltas.add(newDelta)
     }
@@ -132,7 +145,7 @@ class DeltaChain {
         val id: Long = -1L
         val priceDelta: Double
         val price: Double
-        val chainPosition: Int
+        var chainPosition: Int = 0
         val creationTime: Date
 
         @ManyToOne
@@ -143,7 +156,6 @@ class DeltaChain {
             this.deltaChain    = deltaChain
             this.priceDelta    = priceDelta
             this.price         = price
-            this.chainPosition = 0
             this.creationTime  = date
         }
     }
@@ -160,7 +172,7 @@ class DeltaChain {
             fun testCanSaveConsecutivePriceDeltas() {
                 val ticker = "MDS"
                 val date   = Date(System.currentTimeMillis())
-                add(date = date, ticker = ticker, price = 5.0)
+                addDeltas(date = date, listOf(Pair(ticker,  5.0)))
                 val deltaChain1 = deltaChains["MDS"]!!
                 Assertions.assertTrue(deltaChain1.chainLength  == 0)
                 Assertions.assertTrue(deltaChain1.average      == null)
@@ -168,7 +180,7 @@ class DeltaChain {
                 Assertions.assertTrue(deltaChain1.highestDelta == null)
                 Assertions.assertTrue(deltaChain1.initialPrice == 5.0)
 
-                add(date = date, ticker = ticker, price = 10.0)
+                addDeltas(date = date, listOf(Pair(ticker,10.0)))
                 val deltaChain2 = deltaChains["MDS"]!!
                 Assertions.assertTrue(deltaChain2.chainLength  == 1)
                 Assertions.assertTrue(deltaChain2.average      == 100.0)
@@ -176,7 +188,7 @@ class DeltaChain {
                 Assertions.assertTrue(deltaChain2.highestDelta == 100.0)
                 Assertions.assertTrue(deltaChain2.initialPrice == 5.0)
 
-                add(date = date, ticker = ticker, price = 30.0)
+                addDeltas(date = date, listOf(Pair(ticker, 30.0)))
                 val deltaChain3 = deltaChains["MDS"]!!
                 Assertions.assertEquals(2, deltaChain3.chainLength)
                 Assertions.assertEquals(150.0,deltaChain3.average)
@@ -184,7 +196,7 @@ class DeltaChain {
                 Assertions.assertEquals(200.0, deltaChain3.highestDelta)
                 Assertions.assertEquals(5.0, deltaChain3.initialPrice)
 
-                add(date = date, ticker = ticker, price = 31.5)
+                addDeltas(date = date, listOf(Pair(ticker, 31.5)))
                 val deltaChain4 = deltaChains["MDS"]!!
                 Assertions.assertEquals(3,   deltaChain4.chainLength)
                 Assertions.assertEquals(77.5,  deltaChain4.average)
@@ -197,8 +209,8 @@ class DeltaChain {
                 val ticker1 = "MDS"
                 val ticker2 = "TST1"
                 val date   = Date(System.currentTimeMillis())
-                add(date = date, ticker = ticker1, price = 5.0)
-                add(date = date, ticker = ticker2, price = 100.0)
+                addDeltas(date = date, listOf(Pair(ticker1, 5.0)))
+                addDeltas(date = date,listOf(Pair(ticker2, 100.0)))
 
                 /** Check first ticker is okay **/
                 val deltaChain1 = deltaChains[ticker1]!!
@@ -216,8 +228,8 @@ class DeltaChain {
                 Assertions.assertEquals(null, deltaChainB.highestDelta)
                 Assertions.assertEquals(100.0,deltaChainB.initialPrice )
 
-                add(date = date, ticker = ticker1, price = 10.0)
-                add(date = date, ticker = ticker2, price = 300.0)
+                addDeltas(date = date, listOf(Pair(ticker1, 10.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 300.0)))
 
                 /** Check 1st ticker is okay again **/
                 val deltaChain2 = deltaChains[ticker1]!!
@@ -240,8 +252,8 @@ class DeltaChain {
                 val ticker1 = "MDS"
                 val ticker2 = "TST1"
                 val date   = Date(System.currentTimeMillis())
-                add(date = date, ticker = ticker1, price = 5.0)
-                add(date = date, ticker = ticker2, price = 100.0)
+                addDeltas(date = date, listOf(Pair(ticker1, 5.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 100.0)))
 
                 /** Check first ticker is okay **/
                 val deltaChain1 = deltaChains[ticker1]!!
@@ -259,8 +271,8 @@ class DeltaChain {
                 Assertions.assertEquals(null, deltaChainB.highestDelta)
                 Assertions.assertEquals(100.0,deltaChainB.initialPrice )
 
-                add(date = date, ticker = ticker1, price = 10.0)
-                add(date = date, ticker = ticker2, price = 50.0)
+                addDeltas(date = date, listOf(Pair(ticker1, 10.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 50.0)))
 
                 /** Check 1st ticker is okay again **/
                 val deltaChain2 = deltaChains[ticker1]!!
@@ -270,9 +282,14 @@ class DeltaChain {
                 Assertions.assertEquals(100.0, deltaChain2.highestDelta)
                 Assertions.assertEquals(5.0, deltaChain2.initialPrice)
 
-                /** Check the other tickers info is correct **/
-                val deltaChain3 = deltaChains[ticker2]
-                Assertions.assertEquals(null, deltaChain3)
+                /** Check the other tickers info is replaced with a new chain since the old should
+                 * be killed since it terminated on the negative **/
+                val deltaChain3 = deltaChains[ticker2]!!
+                Assertions.assertEquals(0, deltaChain3.chainLength)
+                Assertions.assertEquals(null, deltaChain3.average)
+                Assertions.assertEquals(null, deltaChain3.lowestDelta)
+                Assertions.assertEquals(null, deltaChain3.highestDelta)
+                Assertions.assertEquals(50.0,deltaChain3.initialPrice ) //A new chain with the last value at the head
             }
 
             fun testCanReloadFromDisk() {
@@ -280,8 +297,8 @@ class DeltaChain {
                 val ticker1 = "MDS"
                 val ticker2 = "TST1"
                 val date   = Date(System.currentTimeMillis())
-                add(date = date, ticker = ticker1, price = 5.0)
-                add(date = date, ticker = ticker2, price = 100.0)
+                addDeltas(date = date, listOf(Pair(ticker1, 5.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 100.0)))
 
                 DeltaChain.Test.clearMemoryOnly()
                 Assertions.assertEquals(null, deltaChains[ticker1])
