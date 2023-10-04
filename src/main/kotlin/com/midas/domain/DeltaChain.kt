@@ -82,8 +82,8 @@ class DeltaChain {
                 lateinit var newDelta: Delta
                 if (deltaChain.chainLength == 0) {
                     val tempDelta = ((price - deltaChain.initialPrice) / deltaChain.initialPrice) *100.0
-                    if(tempDelta < 0) {
-                        killChainAndStartNewChain(chain = deltaChain, lastPrice = price)
+                    if(tempDelta <= 0.0) {
+                        killChainAndStartNewChain(date = date, chain = deltaChain, lastPrice = price)
                         return
                     }
                     newDelta = Delta(
@@ -94,8 +94,8 @@ class DeltaChain {
                     )
                 } else {
                     val tempDelta = ((price - deltaChain.deltas[deltaChain.deltas.size - 1].price)/deltaChain.deltas[deltaChain.deltas.size - 1].price)*100.0
-                    if(tempDelta < 0 ) {
-                        killChainAndStartNewChain(chain = deltaChain, lastPrice = price)
+                    if(tempDelta <= 0.0 ) {
+                        killChainAndStartNewChain(date = date, chain = deltaChain, lastPrice = price)
                         return
                     }
                     newDelta = Delta(
@@ -113,13 +113,13 @@ class DeltaChain {
         private fun save(chain: DeltaChain) : DeltaChain {
             return deltaChainRepository.save(chain)
         }
-        private fun killChainAndStartNewChain(chain: DeltaChain, lastPrice: Double) {
+        private fun killChainAndStartNewChain(date: Date, chain: DeltaChain, lastPrice: Double) {
             chain.dead = true
             deltaChains.remove(chain.ticker)
             save(chain)
 
             /** Start a new chain **/
-            addDelta(date = chain.creationTime, ticker = chain.ticker, price = lastPrice)
+            addDelta(date = date, ticker = chain.ticker, price = lastPrice)
         }
     }
 
@@ -320,6 +320,50 @@ class DeltaChain {
                 Assertions.assertEquals(null, deltaChainB.lowestDelta)
                 Assertions.assertEquals(null, deltaChainB.highestDelta)
                 Assertions.assertEquals(100.0,deltaChainB.initialPrice )
+            }
+
+            fun testWillRejectZeroDeltas() {
+                val ticker1 = "MDS"
+                val ticker2 = "TST1"
+                val date   = Date(System.currentTimeMillis())
+                addDeltas(date = date, listOf(Pair(ticker1, 5.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 100.0)))
+
+                /** Check first ticker is okay **/
+                val deltaChain1 = deltaChains[ticker1]!!
+                Assertions.assertEquals(0, deltaChain1.chainLength)
+                Assertions.assertEquals(null, deltaChain1.average)
+                Assertions.assertEquals(null, deltaChain1.lowestDelta)
+                Assertions.assertEquals(null, deltaChain1.highestDelta)
+                Assertions.assertEquals(5.0,  deltaChain1.initialPrice)
+
+                /** Check second ticker is okay **/
+                val deltaChainB = deltaChains[ticker2]!!
+                Assertions.assertEquals(0, deltaChainB.chainLength)
+                Assertions.assertEquals(null, deltaChainB.average)
+                Assertions.assertEquals(null, deltaChainB.lowestDelta)
+                Assertions.assertEquals(null, deltaChainB.highestDelta)
+                Assertions.assertEquals(100.0,deltaChainB.initialPrice )
+
+                addDeltas(date = date, listOf(Pair(ticker1, 10.0)))
+                addDeltas(date = date, listOf(Pair(ticker2, 100.0)))
+
+                /** Check 1st ticker is okay again **/
+                val deltaChain2 = deltaChains[ticker1]!!
+                Assertions.assertEquals(1, deltaChain2.chainLength)
+                Assertions.assertEquals(100.0, deltaChain2.average)
+                Assertions.assertEquals(100.0, deltaChain2.lowestDelta)
+                Assertions.assertEquals(100.0, deltaChain2.highestDelta)
+                Assertions.assertEquals(5.0, deltaChain2.initialPrice)
+
+                /** Check the other tickers info is replaced with a new chain since the old should
+                 * be killed since it terminated on the negative **/
+                val deltaChain3 = deltaChains[ticker2]!!
+                Assertions.assertEquals(0, deltaChain3.chainLength)
+                Assertions.assertEquals(null, deltaChain3.average)
+                Assertions.assertEquals(null, deltaChain3.lowestDelta)
+                Assertions.assertEquals(null, deltaChain3.highestDelta)
+                Assertions.assertEquals(100.0,deltaChain3.initialPrice ) //A new chain with the last value at the head
             }
         }
     }

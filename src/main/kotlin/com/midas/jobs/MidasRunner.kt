@@ -13,13 +13,20 @@ class MidasRunner {
     class SpringAdapter(
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val intraDayMarketWebService: IntraDayMarketWebService,
-        @Autowired private val loggingService: LoggingService
+        @Autowired private val loggingService: LoggingService,
+        @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
     ) {
         @PostConstruct
         fun init() {
+            if(!Companion.applicationProperties.runIntraDayStockService) {
+                Companion.loggingService.log("Skipping intra-day stock records...")
+                return
+            }
+            stockSnapshotSpringAdapter.init()
             MidasRunner.applicationProperties    = applicationProperties
             MidasRunner.loggingService           = loggingService
             MidasRunner.intraDayMarketWebService = intraDayMarketWebService
+
             loggingService.log("MidasRunner initialized")
             if(!Companion.applicationProperties.isNotIntegrationTest) {
                 Companion.loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
@@ -37,22 +44,18 @@ class MidasRunner {
         private lateinit var intraDayMarketWebService: IntraDayMarketWebService
         private lateinit var loggingService: LoggingService
         fun launch() {
-            Thread.sleep(10000)
+            Thread.sleep(20000)
             if(!applicationProperties.isNotIntegrationTest) {
                 loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
                 return
             }
-            if(!applicationProperties.runIntraDayStockService) {
-                loggingService.log("Skipping intra-day stock records...")
-            } else {
-                try {
-                    loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-                    StockSnapshot.downloadContinuously(
-                        intraDayMarketWebService = intraDayMarketWebService
-                    )
-                } catch(ex: Exception) {
-                    loggingService.error(ex)
-                }
+            try {
+                loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
+                StockSnapshot.downloadContinuously(
+                    intraDayMarketWebService = intraDayMarketWebService
+                )
+            } catch(ex: Exception) {
+                loggingService.error(ex)
             }
         }
     }

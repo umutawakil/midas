@@ -86,14 +86,19 @@ class StockSnapshot {
         fun downloadContinuously(
             intraDayMarketWebService: IntraDayMarketWebService
         ) {
-            Thread.sleep(3000)
-            while(true) {
+            var runs = 0
+            Thread.sleep(10000)
+            while(runs != 4) {
                 if (isMarketOpen()) {
                     /** Download snapshot data for the price change milestone ranker **/
                     downloadAndDetectDeltas(intraDayMarketWebService)
                     loggingService.log("Waiting....")
                     //Thread.sleep(60000)
                     Thread.sleep(60000*15)
+                    runs++
+                    if(runs==4) {
+                        loggingService.log("Fourth run completed.")
+                    }
 
                 } else {
                     if(applicationProperties.runStockSnapshotImport && !dailySnapshotTaken) {
@@ -112,7 +117,7 @@ class StockSnapshot {
                         loggingService.log("Daily snapshot taken!")
                     }
 
-                    loggingService.log("Market is closed. Waiting but will try again in ${applicationProperties.pollIntervalMins}")
+                    loggingService.log("Not currently the desired market hour. Waiting but will try again in ${applicationProperties.pollIntervalMins}")
                     Thread.sleep(1000L*60*applicationProperties.pollIntervalMins)
                 }
             }
@@ -130,7 +135,14 @@ class StockSnapshot {
             val minutes = calendar[Calendar.MINUTE]
             loggingService.log("T:$hour:$minutes")
 
-            return (hour >= 4) && (hour < 16)
+            //return (hour >= 4) && (hour < 16)
+            if(hour==9 && minutes < 30) {
+                return false
+            }
+            if(hour==11 && minutes >= 30) {
+                return false
+            }
+            return (hour >= 9) && (hour <= 11)
         }
 
         private fun downloadAndImportStockSnapshots(
@@ -162,7 +174,7 @@ class StockSnapshot {
                         val todaysChange     = Etl.double(todaysChangeObject)
 
                         val price = Etl.double(previousDayClose + todaysChange)
-                        if(price <= 0.0) {
+                        if(price <= 1.0) {
                             continue
                         }
                         records.add(

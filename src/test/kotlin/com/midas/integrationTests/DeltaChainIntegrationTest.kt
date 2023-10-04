@@ -36,4 +36,10 @@ class DeltaChainIntegrationTest {
     fun Can_reload_from_disk() {
         DeltaChain.Test.testCanReloadFromDisk()
     }
+
+    @Order(4)
+    @Test
+    fun will_reject_zero_deltas() {
+        DeltaChain.Test.testWillRejectZeroDeltas()
+    }
 }
