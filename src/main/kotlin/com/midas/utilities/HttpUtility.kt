@@ -34,7 +34,8 @@ class HttpUtility {
                 line = reader.readLine()
             }
             if((httpURLConnection.responseCode >= 200) && (httpURLConnection.responseCode <= 299)) {
-                println("HttpURLConnection request succeeded -> HTTP Code: ${httpURLConnection.responseCode}")
+                //println("HttpURLConnection request succeeded -> HTTP Code: ${httpURLConnection.responseCode}")
+                //println(response.toString())
                 return response.toString()
             } else {
                 println("HttpURLConnection request failed -> HTTP Code: ${httpURLConnection.responseCode}.")

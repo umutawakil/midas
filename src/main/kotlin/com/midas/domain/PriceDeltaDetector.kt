@@ -3,7 +3,6 @@ package com.midas.domain
 import com.midas.configuration.ApplicationProperties
 import com.midas.repositories.CurrentSystemOffsetRepository
 import com.midas.repositories.PriceChangeMilestoneRepository
-//import com.midas.repositories.TimeWindowEntryRepository
 import com.midas.services.LoggingService
 import jakarta.annotation.PostConstruct
 import jakarta.persistence.*

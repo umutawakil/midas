@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties("app")
 class ApplicationProperties {
     val runIntraDayStockService: Boolean
+    val polygonBaseUrl         : String
     val polygonMarketStatusURL : String
     val polygonAllTickersURL   : String
     val polyGonApiKey          : String
@@ -16,6 +17,7 @@ class ApplicationProperties {
 
     constructor(
             runIntraDayStockService: Boolean,
+            polygonBaseUrl         : String,
             polygonMarketStatusURL : String,
             polygonAllTickersURL   : String,
             polyGonApiKey          : String,
@@ -26,6 +28,7 @@ class ApplicationProperties {
             runStockSnapshotImport : Boolean
     ) {
         this.runIntraDayStockService = runIntraDayStockService
+        this.polygonBaseUrl          = polygonBaseUrl
         this.polygonMarketStatusURL  = polygonMarketStatusURL
         this.polygonAllTickersURL    = polygonAllTickersURL
         this.polyGonApiKey           = polyGonApiKey

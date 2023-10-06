@@ -1,6 +1,8 @@
 package com.midas.jobs
 
 import com.midas.configuration.ApplicationProperties
+import com.midas.domain.Financials
+import com.midas.domain.StockMinerPlatform
 import com.midas.domain.StockSnapshot
 import com.midas.interfaces.IntraDayMarketWebService
 import com.midas.services.LoggingService
@@ -14,28 +16,40 @@ class MidasRunner {
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val intraDayMarketWebService: IntraDayMarketWebService,
         @Autowired private val loggingService: LoggingService,
+        @Autowired private val stockMinerPlatformSpringAdapter: StockMinerPlatform.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
+        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
-            if(!Companion.applicationProperties.runIntraDayStockService) {
-                Companion.loggingService.log("Skipping intra-day stock records...")
-                return
-            }
-            stockSnapshotSpringAdapter.init()
             MidasRunner.applicationProperties    = applicationProperties
             MidasRunner.loggingService           = loggingService
             MidasRunner.intraDayMarketWebService = intraDayMarketWebService
 
-            loggingService.log("MidasRunner initialized")
             if(!Companion.applicationProperties.isNotIntegrationTest) {
                 Companion.loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
                 return
             }
 
-            Thread {
-                launch()
-            }.start()
+            /** PriceDelta Job **/
+            /*if(!Companion.applicationProperties.runIntraDayStockService) {
+                Companion.loggingService.log("Skipping intra-day stock records...")
+                return
+            } else {
+                priceDeltaImporterSpringAdapter.init()
+                Thread {
+                    runPriceDeltaJob()
+                }.start()
+            }*/
+
+            /**TODO: StockSnapshot JOb **/
+            /*stockSnapshotSpringAdapter.init()
+            StockSnapshot.populatePastOneYearSnapshots()*/
+
+            /**TODO: Financials Job **/
+            /*financialsSpringAdapter.init()
+            Financials.populatePastOneYearFinancials()
+            loggingService.log("MidasRunner initialized")*/
         }
     }
 
@@ -43,15 +57,12 @@ class MidasRunner {
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var intraDayMarketWebService: IntraDayMarketWebService
         private lateinit var loggingService: LoggingService
-        fun launch() {
+
+        fun runPriceDeltaJob() {
             Thread.sleep(20000)
-            if(!applicationProperties.isNotIntegrationTest) {
-                loggingService.log("MidasRunner skipped. This is expected if this is an integration test!")
-                return
-            }
             try {
                 loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-                StockSnapshot.downloadContinuously(
+                StockMinerPlatform.downloadContinuously(
                     intraDayMarketWebService = intraDayMarketWebService
                 )
             } catch(ex: Exception) {
