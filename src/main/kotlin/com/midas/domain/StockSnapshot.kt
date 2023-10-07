@@ -58,6 +58,25 @@ class StockSnapshot {
         private val          executorService: ExecutorService = ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
             LinkedBlockingQueue()
         )
+        private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
+
+        fun findByDescending(ticker: String) : List<StockSnapshot> {
+            if(snapshotMap.isEmpty()) {
+                loadMap()
+            }
+            return snapshotMap[ticker] ?: emptyList()
+        }
+        private fun loadMap() {
+            println("Loading tickers.....")
+            val results: List<StockSnapshot> = stockSnapshotRepository.findAll().toList()
+            for(r in results) {
+                snapshotMap.computeIfAbsent(r.ticker) { mutableListOf()}.add(r)
+            }
+            for(k in snapshotMap.keys) {
+                snapshotMap[k]!!.sortedByDescending { it.creationDate }
+            }
+            println("Tickers loaded....")
+        }
 
         /**
          * work
@@ -72,6 +91,9 @@ class StockSnapshot {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
+        }
+        fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
+            return ((x2.price - x1.price)/ x1.price)*100.0
         }
 
         private fun importSnapShots(dateString: String) {

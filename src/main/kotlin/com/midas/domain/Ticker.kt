@@ -59,7 +59,7 @@ class Ticker {
          * INSERT INTO Customers (CustomerName, City, Country)
          * SELECT SupplierName, City, Country FROM Suppliers;
          */
-        fun importTickers() {
+        private fun importTickers() {
             val url: String = applicationProperties.polygonBaseUrl +
                     "/v3/reference/tickers?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
 

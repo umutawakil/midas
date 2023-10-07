@@ -1,6 +1,7 @@
 package com.midas.jobs
 
 import com.midas.configuration.ApplicationProperties
+import com.midas.domain.DeltaStat
 import com.midas.domain.Financials
 import com.midas.domain.StockMinerPlatform
 import com.midas.domain.StockSnapshot
@@ -10,6 +11,9 @@ import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+/**
+ * This is just a hook from where to call the process/job you actually want to run.
+ */
 class MidasRunner {
     @Component
     class SpringAdapter(
@@ -18,7 +22,8 @@ class MidasRunner {
         @Autowired private val loggingService: LoggingService,
         @Autowired private val stockMinerPlatformSpringAdapter: StockMinerPlatform.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
-        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter
+        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter,
+        @Autowired private val deltaStatSpringAdapter: DeltaStat.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
@@ -50,6 +55,10 @@ class MidasRunner {
             /*financialsSpringAdapter.init()
             Financials.populatePastOneYearFinancials()
             loggingService.log("MidasRunner initialized")*/
+
+            /**TODO: DeltaStat Job **/
+            /*deltaStatSpringAdapter.init()
+            DeltaStat.calculateDeltaStats()*/
         }
     }
 
