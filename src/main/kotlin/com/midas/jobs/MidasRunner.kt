@@ -1,10 +1,7 @@
 package com.midas.jobs
 
 import com.midas.configuration.ApplicationProperties
-import com.midas.domain.DeltaStat
-import com.midas.domain.Financials
-import com.midas.domain.StockMinerPlatform
-import com.midas.domain.StockSnapshot
+import com.midas.domain.*
 import com.midas.interfaces.IntraDayMarketWebService
 import com.midas.services.LoggingService
 import jakarta.annotation.PostConstruct
@@ -23,7 +20,8 @@ class MidasRunner {
         @Autowired private val stockMinerPlatformSpringAdapter: StockMinerPlatform.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
         @Autowired private val financialsSpringAdapter: Financials.SpringAdapter,
-        @Autowired private val deltaStatSpringAdapter: DeltaStat.SpringAdapter
+        @Autowired private val deltaStatSpringAdapter: DeltaStat.SpringAdapter,
+        @Autowired private val minimumDeltaSpringAdapter: MinimumDelta.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
@@ -37,15 +35,11 @@ class MidasRunner {
             }
 
             /** PriceDelta Job **/
-            /*if(!Companion.applicationProperties.runIntraDayStockService) {
-                Companion.loggingService.log("Skipping intra-day stock records...")
-                return
-            } else {
-                priceDeltaImporterSpringAdapter.init()
-                Thread {
-                    runPriceDeltaJob()
-                }.start()
-            }*/
+            stockMinerPlatformSpringAdapter.init()
+            Companion.loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
+            StockMinerPlatform.downloadContinuously(
+                intraDayMarketWebService = Companion.intraDayMarketWebService
+            )
 
             /**TODO: StockSnapshot JOb **/
             /*stockSnapshotSpringAdapter.init()
@@ -59,6 +53,10 @@ class MidasRunner {
             /**TODO: DeltaStat Job **/
             /*deltaStatSpringAdapter.init()
             DeltaStat.calculateDeltaStats()*/
+
+            /** TODO: Minimum delta job **/
+            /*minimumDeltaSpringAdapter
+            MinimumDelta.calculate()*/
         }
     }
 
@@ -66,17 +64,5 @@ class MidasRunner {
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var intraDayMarketWebService: IntraDayMarketWebService
         private lateinit var loggingService: LoggingService
-
-        fun runPriceDeltaJob() {
-            Thread.sleep(20000)
-            try {
-                loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-                StockMinerPlatform.downloadContinuously(
-                    intraDayMarketWebService = intraDayMarketWebService
-                )
-            } catch(ex: Exception) {
-                loggingService.error(ex)
-            }
-        }
     }
 }

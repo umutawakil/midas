@@ -18,6 +18,7 @@ class DeltaStat {
     private val ticker: String
     private val averageDelta: Double
     private val standardDeviationOfChange: Double
+    private val maxDelta: Double
     private val windowDelta: Double
     private val windowSize: Int
 
@@ -25,12 +26,14 @@ class DeltaStat {
         ticker: String,
         averageDelta: Double,
         standardDeviationOfChange: Double,
+        maxDelta: Double,
         windowDelta: Double,
         windowSize: Int
     ) {
         this.ticker                    = ticker
         this.averageDelta              = averageDelta
         this.standardDeviationOfChange = standardDeviationOfChange
+        this.maxDelta                  = maxDelta
         this.windowDelta               = windowDelta
         this.windowSize                = windowSize
     }
@@ -70,15 +73,21 @@ class DeltaStat {
                     if (snapshots.size < w) {
                         continue
                     }
+                    var maxDelta = 0.0
                     var averageDelta = 0.0
                     for (i in 1 until w) {
-                        averageDelta += StockSnapshot.delta(x2 = snapshots[i], x1 = snapshots[i - 1])
+                        val delta = StockSnapshot.delta(x2 = snapshots[i - 1], x1 = snapshots[i])
+                        if (delta > maxDelta) {
+                            maxDelta  = delta
+                        }
+                        averageDelta += delta
+
                     }
                     averageDelta /= w
 
                     var standardDeviationOfChange = 0.0
                     for (i in 1 until w) {
-                        standardDeviationOfChange += abs(averageDelta - StockSnapshot.delta(x2 = snapshots[i], x1 = snapshots[i - 1]))
+                        standardDeviationOfChange += abs(averageDelta - StockSnapshot.delta(x2 = snapshots[i - 1], x1 = snapshots[i]))
                     }
                     standardDeviationOfChange /= w
 
@@ -89,6 +98,7 @@ class DeltaStat {
                             ticker                    = t,
                             averageDelta              = averageDelta,
                             standardDeviationOfChange = standardDeviationOfChange,
+                            maxDelta                  = maxDelta,
                             windowDelta               = windowDelta,
                             windowSize                = w
                         )

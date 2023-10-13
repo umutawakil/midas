@@ -35,6 +35,7 @@ class Financials {
     private val operatingCashFlow : Double
     private val grossProfit       : Double
     private val revenue           : Double
+    private val netIncome         : Double
     private val startDate         : Date
     private val endDate           : Date
 
@@ -46,6 +47,7 @@ class Financials {
         operatingCashFlow: Double,
         grossProfit: Double,
         revenue: Double,
+        netIncome: Double,
         startDate: Date,
         endDate: Date
     )
@@ -58,6 +60,7 @@ class Financials {
         this.operatingCashFlow = operatingCashFlow
         this.grossProfit       = grossProfit
         this.revenue           = revenue
+        this.netIncome         = netIncome
         this.startDate         = startDate
         this.endDate           = endDate
     }
@@ -135,6 +138,7 @@ class Financials {
                 val operatingCashFlow: Double?  = Etl.doubleN((cashFlowStatement["net_cash_flow_from_operating_activities"] as JSONObject?)?.get("value"))
                 val grossProfit: Double?        = Etl.doubleN((incomeStatement["gross_profit"] as JSONObject?)?.get("value"))
                 val revenue: Double?            = Etl.doubleN((incomeStatement["revenues"]  as JSONObject?)?.get("value"))
+                val costAndExpenses: Double?    = Etl.doubleN((incomeStatement["costs_and_expenses"]  as JSONObject?)?.get("value"))
 
                 if(
                     netCashFlow == null ||
@@ -142,7 +146,8 @@ class Financials {
                     grossProfit == null ||
                     revenue == null ||
                     assets == null ||
-                    liabilities == null
+                    liabilities == null ||
+                    costAndExpenses == null
                     ) {
                     continue
                 }
@@ -156,6 +161,7 @@ class Financials {
                         operatingCashFlow = operatingCashFlow,
                         grossProfit       = grossProfit,
                         revenue           = revenue,
+                        netIncome         = revenue - costAndExpenses,
                         startDate         = startDate,
                         endDate           = endDate
                     )

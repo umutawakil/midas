@@ -91,6 +91,7 @@ class StockSnapshot {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
+            loggingService.log("import done.")
         }
         fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
             return ((x2.price - x1.price)/ x1.price)*100.0

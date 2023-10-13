@@ -47,23 +47,22 @@ class StockMinerPlatform {
         fun downloadContinuously(
             intraDayMarketWebService: IntraDayMarketWebService
         ) {
-            var runs = 0
-            Thread.sleep(10000)
-            while(runs != 4) {
+            //var runs = 0
+            while(true) {
                 if (isMarketOpen()) {
                     /** Download snapshot data for the price change milestone ranker **/
                     downloadAndDetectDeltas(intraDayMarketWebService)
                     loggingService.log("Waiting....")
                     //Thread.sleep(60000)
-                    Thread.sleep(60000*15)
-                    runs++
-                    if(runs==4) {
-                        loggingService.log("Fourth run completed.")
-                    }
+                    Thread.sleep(60000 * 15)
+                    /*runs++
+                if(runs==4) {
+                    loggingService.log("Fourth run completed.")
+                }*/
 
                 } else {
                     loggingService.log("Not currently the desired market hour. Waiting but will try again in ${applicationProperties.pollIntervalMins}")
-                    Thread.sleep(1000L*60*applicationProperties.pollIntervalMins)
+                    Thread.sleep(1000L * 60 * applicationProperties.pollIntervalMins)
                 }
             }
         }

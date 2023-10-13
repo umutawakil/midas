@@ -39,6 +39,10 @@ class Ticker {
             Ticker.tickerRepository      = tickerRepository
 
             var results: List<Ticker> = tickerRepository.findAll().toList()
+            /*if(results.isEmpty()) {
+                importTickers()
+                results = tickerRepository.findAll().toList()
+            }*/
             loggingService.log("Tickers loaded from DB:  (${results.size}) loaded")
             results.forEach {
                 tickerCache[it.name] = it
@@ -59,6 +63,7 @@ class Ticker {
          * INSERT INTO Customers (CustomerName, City, Country)
          * SELECT SupplierName, City, Country FROM Suppliers;
          */
+        /** This does not pull all down but requires pagination inorder to get every ticker. **/
         private fun importTickers() {
             val url: String = applicationProperties.polygonBaseUrl +
                     "/v3/reference/tickers?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
