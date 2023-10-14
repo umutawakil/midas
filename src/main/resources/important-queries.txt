@@ -1,0 +1,25 @@
+## v_milestone
+
+CREATE VIEW `v_milestone` AS
+SELECT * FROM (
+	SELECT d.ticker,
+	d.price,
+	d.delta,
+	d.running_delta,
+	100.0*(d.price/ m.max_price) AS perc_max_price,
+	100.0*(d.running_delta/m.max_delta) AS perc_rmax_delta,
+	100.0*(d.delta/m.max_delta) As perc_max_delta,
+	m.time_window,
+	TIMESTAMPDIFF(MINUTE, d.insert_time, CURRENT_TIMESTAMP()) AS `time_offset(mins)`
+
+	FROM milestone m
+	JOIN
+	(
+		SELECT * FROM delta d1
+		JOIN (SELECT d3.ticker as symbol, MAX(insert_time) AS max_time FROM delta d3 GROUP BY symbol) d2
+		ON d1.ticker = d2.symbol AND d1.insert_time = d2.max_time
+	) d
+	ON m.ticker = d.ticker
+) t1
+WHERE t1.perc_max_price >= 100.0
+ORDER BY t1.running_delta;

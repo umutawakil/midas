@@ -44,8 +44,7 @@ class MidasRunner {
             /** Minimum delta job **/
             /*minimumDeltaSpringAdapter
             MinimumDelta.calculate()*/
-
-
+            
             /** Ticker job---------------------------------------- **/
             //tickerSpringAdapter.init()
 
@@ -54,13 +53,13 @@ class MidasRunner {
             StockSnapshot.populatePastOneMonthSnapshots()*/
 
             /** Milestone calculation job **/
-            /**milestoneSpringAdapter.init()
-            Milestone.calculateMilestones()**/
+            /*milestoneSpringAdapter.init()
+            Milestone.calculateMilestones()*/
 
             /** Continuous stock snapshots Job **/
             stockMinerPlatformSpringAdapter.init()
             Companion.loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-            StockMinerPlatform.mineLatestBarsContinuously()
+            StockMinerPlatform.recordRealTimeMarketChangesContinuously()
         }
     }
 

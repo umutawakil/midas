@@ -18,12 +18,21 @@ class Delta {
     private val ticker: String
     private val price: Double
     private val delta: Double
+    private val runningDelta: Double
     private val previousClosePrice: Double
     private val openPrice: Double
-    constructor(ticker: String, price: Double, delta: Double, previousClosePrice: Double, openPrice: Double) {
+    constructor(
+        ticker: String,
+        price: Double,
+        delta: Double,
+        runningDelta: Double,
+        previousClosePrice: Double,
+        openPrice: Double
+    ) {
         this.ticker             = ticker
         this.price              = price
         this.delta              = delta
+        this.runningDelta       = runningDelta
         this.previousClosePrice = previousClosePrice
         this.openPrice          = openPrice
     }

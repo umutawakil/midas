@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 /**
+ * TODO: Move this logic into the delta class and delete this file
  *
  * Platform for executing an algorithm continuously that is in sync with the market.
  * There's no mining algorithm in it directly but it calls on one of your choosing such as
@@ -44,7 +45,7 @@ class StockMinerPlatform {
             LinkedBlockingQueue()
         )
 
-        fun mineLatestBarsContinuously() {
+        fun recordRealTimeMarketChangesContinuously() {
             while(true) {
                 if (isMarketOpen()) {
                     /** Download snapshot data for the price change milestone ranker **/
@@ -86,6 +87,8 @@ class StockMinerPlatform {
                 try {
                     loggingService.log("Requesting data for ranker...")
                     val jsonResult: JSONArray = downloadRecords()["tickers"] as JSONArray
+                    val previousPrices: MutableMap<String, Double> = HashMap()
+
                     for (i in jsonResult.indices) {
                         val prevDayObject          = (jsonResult[i] as JSONObject)["prevDay"]
                         val dayObject              = (jsonResult[i] as JSONObject)["day"]
@@ -105,11 +108,16 @@ class StockMinerPlatform {
                         if(price <= 0.1) {
                             continue
                         }
+                        val previousPrice: Double? = previousPrices[ticker]
+                        val runningDelta: Double   = if(previousPrice == null) { 0.0 } else {100.0*((price - previousPrice) / previousPrice) }
+                        previousPrices[ticker]     = price
+
                         Delta.save(
                             Delta(
                                 ticker             = ticker,
                                 price              = price,
                                 delta              = todaysChangePerc,
+                                runningDelta       = runningDelta,
                                 previousClosePrice = previousDayClose,
                                 openPrice          = openPrice
                             )
