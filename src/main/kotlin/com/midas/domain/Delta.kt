@@ -39,15 +39,17 @@ class Delta {
 
     @Component
     class SpringAdapter(
-        @Autowired val applicationProperties : ApplicationProperties,
-        @Autowired val deltaRepository       : DeltaRepository,
-        @Autowired val loggingService        : LoggingService
+        @Autowired val applicationProperties           : ApplicationProperties,
+        @Autowired val deltaRepository                 : DeltaRepository,
+        @Autowired val loggingService                  : LoggingService,
+        @Autowired val stockMinerPlatformSpringAdapter : StockMinerPlatform.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
             Delta.applicationProperties = applicationProperties
             Delta.deltaRepository       = deltaRepository
             Delta.loggingService        = loggingService
+            stockMinerPlatformSpringAdapter.init()
         }
     }
 
@@ -55,8 +57,33 @@ class Delta {
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var loggingService: LoggingService
         private lateinit var deltaRepository: DeltaRepository
-        fun save(delta: Delta) {
-            deltaRepository.save(delta)
+
+        fun continuouslyCalculateRealtimeDeltas() {
+            StockMinerPlatform.recordRealTimeMarketChangesContinuously(
+                priceUpdateHandlerStrategy = StandardPriceUpdateHandlerStrategy()
+            )
+        }
+
+        class StandardPriceUpdateHandlerStrategy: StockMinerPlatform.Companion.PriceUpdateHandlerStrategy {
+            override fun process(
+                ticker: String,
+                price: Double,
+                delta: Double,
+                runningDelta: Double,
+                previousClosePrice: Double,
+                openPrice: Double
+            ) {
+                deltaRepository.save(
+                    Delta(
+                        ticker             = ticker,
+                        price              = price,
+                        delta              = delta,
+                        runningDelta       = runningDelta,
+                        previousClosePrice = previousClosePrice,
+                        openPrice          = openPrice
+                    )
+                )
+            }
         }
     }
 }

@@ -16,12 +16,9 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 /**
- * TODO: Move this logic into the delta class and delete this file
- *
- * Platform for executing an algorithm continuously that is in sync with the market.
- * There's no mining algorithm in it directly but it calls on one of your choosing such as
- * PriceDeltaDetector, DeltaChain, etc.
- * It does however retrieve up to minute stocksnapshots which can be mined
+ * Platform for polling the market for price updates and executing a strategy/callback against each
+ * result for each ticker. This is autility class for other class that want to continuously process real-time
+ * market data.
  */
 class StockMinerPlatform {
     @Component
@@ -45,11 +42,10 @@ class StockMinerPlatform {
             LinkedBlockingQueue()
         )
 
-        fun recordRealTimeMarketChangesContinuously() {
-            while(true) {
+        fun recordRealTimeMarketChangesContinuously(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {
+            while (true) {
                 if (isMarketOpen()) {
-                    /** Download snapshot data for the price change milestone ranker **/
-                    download()
+                    download(priceUpdateHandlerStrategy)
                     loggingService.log("Waiting....")
                     Thread.sleep(60000 * 15)
 
@@ -82,7 +78,7 @@ class StockMinerPlatform {
             return (hour >= 9) && (hour <= 11)
         }
 
-        private fun download() {
+        private fun download(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {
             executorService.execute {
                 try {
                     loggingService.log("Requesting data for ranker...")
@@ -112,7 +108,7 @@ class StockMinerPlatform {
                         val runningDelta: Double   = if(previousPrice == null) { 0.0 } else {100.0*((price - previousPrice) / previousPrice) }
                         previousPrices[ticker]     = price
 
-                        Delta.save(
+                        /*Delta.save(
                             Delta(
                                 ticker             = ticker,
                                 price              = price,
@@ -121,6 +117,14 @@ class StockMinerPlatform {
                                 previousClosePrice = previousDayClose,
                                 openPrice          = openPrice
                             )
+                        )*/
+                        priceUpdateHandlerStrategy.process(
+                            ticker             = ticker,
+                            price              = price,
+                            delta              = todaysChangePerc,
+                            runningDelta       = runningDelta,
+                            previousClosePrice = previousDayClose,
+                            openPrice          = openPrice
                         )
                     }
                     loggingService.log("Ranking data.....")
@@ -131,6 +135,17 @@ class StockMinerPlatform {
                     loggingService.error(ex)
                 }
             }
+        }
+
+        interface PriceUpdateHandlerStrategy {
+            fun process(
+                ticker: String,
+                price: Double,
+                delta: Double,
+                runningDelta: Double,
+                previousClosePrice: Double,
+                openPrice: Double
+            )
         }
 
         private fun downloadRecords() : JSONObject {

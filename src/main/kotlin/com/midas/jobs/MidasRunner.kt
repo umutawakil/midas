@@ -15,7 +15,7 @@ class MidasRunner {
     class SpringAdapter(
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val loggingService: LoggingService,
-        @Autowired private val stockMinerPlatformSpringAdapter: StockMinerPlatform.SpringAdapter,
+        @Autowired private val deltaSpringAdapter: Delta.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
         @Autowired private val financialsSpringAdapter: Financials.SpringAdapter,
         @Autowired private val minimumDeltaSpringAdapter: MinimumDelta.SpringAdapter,
@@ -44,7 +44,7 @@ class MidasRunner {
             /** Minimum delta job **/
             /*minimumDeltaSpringAdapter
             MinimumDelta.calculate()*/
-            
+
             /** Ticker job---------------------------------------- **/
             //tickerSpringAdapter.init()
 
@@ -57,9 +57,9 @@ class MidasRunner {
             Milestone.calculateMilestones()*/
 
             /** Continuous stock snapshots Job **/
-            stockMinerPlatformSpringAdapter.init()
+            deltaSpringAdapter.init()
             Companion.loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-            StockMinerPlatform.recordRealTimeMarketChangesContinuously()
+            Delta.continuouslyCalculateRealtimeDeltas()
         }
     }
 
