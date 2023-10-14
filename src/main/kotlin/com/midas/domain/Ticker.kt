@@ -3,6 +3,7 @@ package com.midas.domain
 import com.midas.configuration.ApplicationProperties
 import com.midas.repositories.TickerRepository
 import com.midas.services.LoggingService
+import com.midas.utilities.Etl
 import com.midas.utilities.HttpUtility
 import jakarta.annotation.PostConstruct
 import jakarta.persistence.*
@@ -10,6 +11,8 @@ import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.text.SimpleDateFormat
+import java.util.*
 
 /** TODO: THis needs to update itself regularly or have the stock snapshot logic update ticker by ticker**/
 @Entity
@@ -37,12 +40,13 @@ class Ticker {
             }
             Ticker.applicationProperties = applicationProperties
             Ticker.tickerRepository      = tickerRepository
+            Ticker.loggingService        = loggingService
 
             var results: List<Ticker> = tickerRepository.findAll().toList()
-            /*if(results.isEmpty()) {
+            if(results.isEmpty()) {
                 importTickers()
                 results = tickerRepository.findAll().toList()
-            }*/
+            }
             loggingService.log("Tickers loaded from DB:  (${results.size}) loaded")
             results.forEach {
                 tickerCache[it.name] = it
@@ -54,31 +58,24 @@ class Ticker {
         private lateinit var tickerRepository: TickerRepository
         private val tickerCache: MutableMap<String, Ticker> = mutableMapOf()
         private lateinit var applicationProperties: ApplicationProperties
-
+        private lateinit var loggingService: LoggingService
         fun getTickers() : List<String> {
             return this.tickerCache.values.map { it.name}
         }
 
-        /**
-         * INSERT INTO Customers (CustomerName, City, Country)
-         * SELECT SupplierName, City, Country FROM Suppliers;
-         */
-        /** This does not pull all down but requires pagination inorder to get every ticker. **/
         private fun importTickers() {
-            val url: String = applicationProperties.polygonBaseUrl +
-                    "/v3/reference/tickers?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
-
-            val result: JSONObject = HttpUtility.getJSONObject(inputURL = url)
-            val tickerObjects = result["results"] as JSONArray
-
-            val tickers: List<Ticker> = tickerObjects.toList().filter{
-                ((it as JSONObject)["locale"] as String) == "us"
-            }.map {
-                Ticker(name = (it as JSONObject)["ticker"] as String)
+            loggingService.log("Importing tickers from service because DB table is empty...")
+            val url: String = applicationProperties.polygonAllTickersURL +
+                    "?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
+            val results: JSONArray = HttpUtility.getJSONObject(inputURL = url)["tickers"] as JSONArray
+            val tickers: MutableSet<String> = mutableSetOf()
+            for (i in results.indices) {
+                tickers.add(((results[i] as JSONObject)["ticker"] as String).uppercase())
             }
-            tickers.forEach {
-                tickerRepository.save(it)
+            for(t in tickers) {
+                tickerRepository.save(Ticker(name = t))
             }
+            loggingService.log("Ticker import complete")
         }
     }
 

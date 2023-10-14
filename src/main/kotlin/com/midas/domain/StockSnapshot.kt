@@ -78,23 +78,33 @@ class StockSnapshot {
             println("Tickers loaded....")
         }
 
-        /**
-         * work
-         * min date 2022-10-06
-         * max date 2023-10-04
-         */
-
         fun populatePastOneYearSnapshots() {
+            populateSnapshots(days = 365)
+        }
+
+        fun populatePastOneMonthSnapshots() {
+            populateSnapshots(days = 30)
+        }
+
+        private fun populateSnapshots(days: Int) {
             var tempDate = getCurrentDateString()
             loggingService.log("Initial date: $tempDate")
-            for(i in 0 until 365) {
+
+            for(i in 0 until days) {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
-            loggingService.log("import done.")
         }
+
         fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
             return ((x2.price - x1.price)/ x1.price)*100.0
+        }
+
+        fun max(currentPrice: Double, s: StockSnapshot) : Double {
+            if(currentPrice> s.price) {
+                return currentPrice
+            }
+            return s.price
         }
 
         private fun importSnapShots(dateString: String) {
@@ -113,13 +123,16 @@ class StockSnapshot {
 
             val result: JSONObject = HttpUtility.getJSONObject(inputURL = url)
             val queryCount: Long = result["queryCount"] as Long
-            if(queryCount == 0L) return
+            if(queryCount == 0L) {
+                //importSnapShotsWorker(dateString = decrementDateString(input = dateString))
+                return
+            }
 
             val creationDate: Date = SimpleDateFormat("yyyy-MM-dd").parse(dateString)
             val results = result["results"] as JSONArray
             val snapShots: List<StockSnapshot> = results.toList().filter {
                 ((it as JSONObject)["T"] != null)&&
-                (it["c"] != null) && (it["v"] != null) && (Etl.double(it["c"]) > 1.00)
+                (it["c"] != null) && (it["v"] != null) && (Etl.double(it["c"]) > 0.10)
 
             }.map {
                 StockSnapshot(

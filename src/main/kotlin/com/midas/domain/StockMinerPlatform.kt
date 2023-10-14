@@ -1,7 +1,6 @@
 package com.midas.domain
 
 import com.midas.configuration.ApplicationProperties
-import com.midas.interfaces.IntraDayMarketWebService
 import com.midas.services.LoggingService
 import com.midas.utilities.Etl
 import com.midas.utilities.HttpUtility
@@ -21,12 +20,13 @@ import java.util.concurrent.TimeUnit
  * Platform for executing an algorithm continuously that is in sync with the market.
  * There's no mining algorithm in it directly but it calls on one of your choosing such as
  * PriceDeltaDetector, DeltaChain, etc.
+ * It does however retrieve up to minute stocksnapshots which can be mined
  */
 class StockMinerPlatform {
     @Component
     class SpringAdapter(
-        @Autowired private val applicationProperties        : ApplicationProperties,
-        @Autowired private val loggingService               : LoggingService
+        @Autowired private val applicationProperties : ApplicationProperties,
+        @Autowired private val loggingService        : LoggingService
     ) {
         @PostConstruct
         fun init() {
@@ -44,21 +44,13 @@ class StockMinerPlatform {
             LinkedBlockingQueue()
         )
 
-        fun downloadContinuously(
-            intraDayMarketWebService: IntraDayMarketWebService
-        ) {
-            //var runs = 0
+        fun mineLatestBarsContinuously() {
             while(true) {
                 if (isMarketOpen()) {
                     /** Download snapshot data for the price change milestone ranker **/
-                    downloadAndDetectDeltas(intraDayMarketWebService)
+                    download()
                     loggingService.log("Waiting....")
-                    //Thread.sleep(60000)
                     Thread.sleep(60000 * 15)
-                    /*runs++
-                if(runs==4) {
-                    loggingService.log("Fourth run completed.")
-                }*/
 
                 } else {
                     loggingService.log("Not currently the desired market hour. Waiting but will try again in ${applicationProperties.pollIntervalMins}")
@@ -89,38 +81,41 @@ class StockMinerPlatform {
             return (hour >= 9) && (hour <= 11)
         }
 
-        private fun downloadAndDetectDeltas(intraDayMarketWebService: IntraDayMarketWebService) {
+        private fun download() {
             executorService.execute {
                 try {
                     loggingService.log("Requesting data for ranker...")
-                    val date = Date(System.currentTimeMillis())
-                    val jsonResult: JSONArray = intraDayMarketWebService.downloadRecords()["tickers"] as JSONArray
-                    val records: MutableList<Pair<String, Double>> = mutableListOf()
+                    val jsonResult: JSONArray = downloadRecords()["tickers"] as JSONArray
                     for (i in jsonResult.indices) {
-                        val prevDayObject = (jsonResult[i] as JSONObject)["prevDay"]
-                        val todaysChangeObject = (jsonResult[i] as JSONObject)["todaysChange"]
+                        val prevDayObject          = (jsonResult[i] as JSONObject)["prevDay"]
+                        val dayObject              = (jsonResult[i] as JSONObject)["day"]
+                        val todaysChangeObject     = (jsonResult[i] as JSONObject)["todaysChange"]
+                        val todaysChangePercObject = (jsonResult[i] as JSONObject)["todaysChangePerc"]
                         if(prevDayObject == null ||todaysChangeObject == null) {
                             continue
                         }
 
                         val ticker = (jsonResult[i] as JSONObject)["ticker"] as String
                         val previousDayClose = Etl.double((prevDayObject as JSONObject)["c"])
+                        val openPrice        = Etl.double((dayObject as JSONObject)["o"])
                         val todaysChange     = Etl.double(todaysChangeObject)
+                        val todaysChangePerc = Etl.double(todaysChangePercObject)
 
                         val price = Etl.double(previousDayClose + todaysChange)
-                        if(price <= 1.0) {
+                        if(price <= 0.1) {
                             continue
                         }
-                        records.add(
-                            Pair(
-                                first = ticker,
-                                second = price
+                        Delta.save(
+                            Delta(
+                                ticker             = ticker,
+                                price              = price,
+                                delta              = todaysChangePerc,
+                                previousClosePrice = previousDayClose,
+                                openPrice          = openPrice
                             )
                         )
                     }
                     loggingService.log("Ranking data.....")
-                    //PriceDeltaDetector.rank(date = date, stocks = records)
-                    DeltaChain.addDeltas(date = date, stocks = records)
 
                 } catch (ex: Exception) {
                     //TODO: Need to notify me the run failed
@@ -130,13 +125,11 @@ class StockMinerPlatform {
             }
         }
 
-        @Component
-        private class PolyGonService : IntraDayMarketWebService {
-            override fun downloadRecords() : JSONObject {
-                val url: String = applicationProperties.polygonAllTickersURL +
-                        "?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
-                return HttpUtility.getJSONObject(inputURL = url)
-            }
+        private fun downloadRecords() : JSONObject {
+            val url: String = applicationProperties.polygonAllTickersURL +
+                    "?apiKey=${applicationProperties.polyGonApiKey}&include_otc=true"
+            return HttpUtility.getJSONObject(inputURL = url)
         }
+
     }
 }
