@@ -26,7 +26,7 @@ class StockSnapshot {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private val id           : Long = -1L
     private val ticker       : String
-    val price        : Double
+    private val price        : Double
     private var volume       : Int
     private val creationDate : Date
 
