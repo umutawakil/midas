@@ -17,8 +17,6 @@ class MidasRunner {
         @Autowired private val loggingService: LoggingService,
         @Autowired private val deltaSpringAdapter: Delta.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
-        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter,
-        @Autowired private val minimumDeltaSpringAdapter: MinimumDelta.SpringAdapter,
         @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
         @Autowired private val milestoneSpringAdapter: Milestone.SpringAdapter
     ) {
@@ -31,19 +29,9 @@ class MidasRunner {
                 return
             }
 
-            /** Financials Job------------------------------------- **/
-            /*financialsSpringAdapter.init()
-            Financials.populatePastOneYearFinancials()
-            loggingService.log("MidasRunner initialized")*/
-
-
             /** Historical StockSnapshot JOb 1 --------------------**/
             /*stockSnapshotSpringAdapter.init()
             StockSnapshot.populatePastOneYearSnapshots()*/
-
-            /** Minimum delta job **/
-            /*minimumDeltaSpringAdapter
-            MinimumDelta.calculate()*/
 
             /** Ticker job---------------------------------------- **/
             //tickerSpringAdapter.init()

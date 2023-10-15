@@ -38,30 +38,6 @@ CREATE TABLE `delta` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `financials`
---
-
-DROP TABLE IF EXISTS `financials`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `financials` (
-  `ID` int NOT NULL AUTO_INCREMENT,
-  `ticker` varchar(45) NOT NULL,
-  `assets` double NOT NULL,
-  `liabilities` double NOT NULL,
-  `book_value` double NOT NULL,
-  `operating_cash_flow` double NOT NULL,
-  `net_cash_flow` double NOT NULL,
-  `gross_profit` double NOT NULL,
-  `revenue` double NOT NULL,
-  `net_income` double NOT NULL,
-  `start_date` date NOT NULL,
-  `end_date` date NOT NULL,
-  PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=24119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `milestone`
 --
 
@@ -78,24 +54,7 @@ CREATE TABLE `milestone` (
   `time_window` int NOT NULL,
   `count` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=946671 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `minimum_delta`
---
-
-DROP TABLE IF EXISTS `minimum_delta`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `minimum_delta` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `ticker` varchar(45) NOT NULL,
-  `minimum_delta` double NOT NULL,
-  `window_size` int NOT NULL,
-  `time_span` int NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=98117 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1011851 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -157,20 +116,6 @@ SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = @saved_cs_client;
 
 --
--- Table structure for table `watch_list`
---
-
-DROP TABLE IF EXISTS `watch_list`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `watch_list` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `ticker` varchar(45) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Final view structure for view `v_milestone`
 --
 
@@ -197,4 +142,4 @@ CREATE TABLE `watch_list` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-10-15 17:12:09
+-- Dump completed on 2023-10-15 17:29:15
