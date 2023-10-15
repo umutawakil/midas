@@ -26,7 +26,7 @@ class StockSnapshot {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private val id           : Long = -1L
     private val ticker       : String
-    private val price        : Double
+    val price        : Double
     private var volume       : Int
     private val creationDate : Date
 
@@ -73,7 +73,7 @@ class StockSnapshot {
                 snapshotMap.computeIfAbsent(r.ticker) { mutableListOf()}.add(r)
             }
             for(k in snapshotMap.keys) {
-                snapshotMap[k]!!.sortedByDescending { it.creationDate }
+                snapshotMap[k] = snapshotMap[k]!!.sortedByDescending { it.creationDate }.toMutableList()
             }
             println("Tickers loaded....")
         }

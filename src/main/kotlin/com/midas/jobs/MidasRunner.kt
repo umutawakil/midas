@@ -53,13 +53,13 @@ class MidasRunner {
             StockSnapshot.populatePastOneMonthSnapshots()*/
 
             /** Milestone calculation job **/
-            /*milestoneSpringAdapter.init()
-            Milestone.calculateMilestones()*/
+            milestoneSpringAdapter.init()
+            Milestone.calculateMilestones()
 
             /** Continuous stock snapshots Job **/
-            deltaSpringAdapter.init()
+            /*deltaSpringAdapter.init()
             Companion.loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-            Delta.continuouslyCalculateRealtimeDeltas()
+            Delta.continuouslyCalculateRealtimeDeltas()*/
         }
     }
 
