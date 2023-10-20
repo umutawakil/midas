@@ -29,20 +29,16 @@ class MidasRunner {
                 return
             }
 
-            /** Historical StockSnapshot JOb 1 --------------------**/
-            /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.populatePastOneYearSnapshots()*/
-
             /** Ticker job---------------------------------------- **/
             //tickerSpringAdapter.init()
 
-            /** Historical StockSnapshot JOb 2**/
+            /** Historical StockSnapshot JOb--------------------**/
             /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.populatePastOneMonthSnapshots()*/
+            StockSnapshot.populatePastOneYearSnapshots()*/
 
             /** Milestone calculation job **/
-            /*milestoneSpringAdapter.init()
-            Milestone.calculateMilestones()*/
+            milestoneSpringAdapter.init()
+            Milestone.calculateMilestones()
 
             /** Continuous stock snapshots Job **/
             /*deltaSpringAdapter.init()

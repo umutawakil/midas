@@ -20,11 +20,13 @@ class Milestone {
     private val maxDelta: Double
     private val minDelta: Double
     private val maxPrice: Double
+    private val minPrice: Double
     private val windowDelta: Double
     private val timeWindow: Int
     private val count: Int /** TOOD: Polygon API has some tickers that have very few records but it might not be polygons fault**/
-    constructor(ticker: String, maxPrice: Double, maxDelta: Double, minDelta: Double, windowDelta: Double, timeWindow: Int, count: Int) {
+    constructor(ticker: String, minPrice: Double, maxPrice: Double, maxDelta: Double, minDelta: Double, windowDelta: Double, timeWindow: Int, count: Int) {
         this.ticker      = ticker
+        this.minPrice    = minPrice
         this.maxPrice    = maxPrice
         this.maxDelta    = maxDelta
         this.minDelta    = minDelta
@@ -54,7 +56,7 @@ class Milestone {
         private lateinit var milestoneRepository: MilestoneRepository
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var loggingService: LoggingService
-        private val WINDOWS: List<Int> = listOf(5, 10, 20, 60)
+        private val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
 
         fun calculateMilestones() {
             var c = 0
@@ -64,6 +66,7 @@ class Milestone {
                 for (w in WINDOWS) {
                     var maxDelta = 0.0
                     var maxPrice = 0.0
+                    var minPrice = Double.MAX_VALUE
                     var minDelta = Double.MAX_VALUE
 
                     for (i in 1 until w) {
@@ -72,10 +75,12 @@ class Milestone {
                         if (currentDelta > maxDelta) {
                             maxDelta = currentDelta
                         }
-                        maxPrice = StockSnapshot.max(currentPrice = maxPrice, s = snapshots[i - 1])
                         if (currentDelta < minDelta) {
                             minDelta = currentDelta
                         }
+
+                        maxPrice = StockSnapshot.max(currentPrice = maxPrice, s = snapshots[i - 1])
+                        minPrice = StockSnapshot.min(currentPrice = minPrice, s = snapshots[i - 1])
                     }
 
                     var windowDelta = 0.0
@@ -85,6 +90,7 @@ class Milestone {
                     milestoneRepository.save(
                         Milestone(
                             ticker      = t,
+                            minPrice    = minPrice,
                             maxPrice    = maxPrice,
                             maxDelta    = maxDelta,
                             minDelta    = minDelta,

@@ -11,4 +11,4 @@ WHERE
     max_price <= 300 AND
     price >= 0.1 AND
     window_delta >= 20
-ORDER BY running_delta DESC,window_delta DESC; /** Need to play with what your sorting on **/
+ORDER BY running_delta DESC; /** Need to play with what your sorting on **/

@@ -17,21 +17,21 @@ class Delta {
     private val id  : Long = -1L
     private val ticker: String
     private val price: Double
-    private val delta: Double
+    private val openDelta: Double
     private val runningDelta: Double
     private val previousClosePrice: Double
     private val openPrice: Double
     constructor(
         ticker: String,
         price: Double,
-        delta: Double,
+        openDelta: Double,
         runningDelta: Double,
         previousClosePrice: Double,
         openPrice: Double
     ) {
         this.ticker             = ticker
         this.price              = price
-        this.delta              = delta
+        this.openDelta          = openDelta
         this.runningDelta       = runningDelta
         this.previousClosePrice = previousClosePrice
         this.openPrice          = openPrice
@@ -68,7 +68,7 @@ class Delta {
             override fun process(
                 ticker: String,
                 price: Double,
-                delta: Double,
+                openDelta: Double,
                 runningDelta: Double,
                 previousClosePrice: Double,
                 openPrice: Double
@@ -77,7 +77,7 @@ class Delta {
                     Delta(
                         ticker             = ticker,
                         price              = price,
-                        delta              = delta,
+                        openDelta          = openDelta,
                         runningDelta       = runningDelta,
                         previousClosePrice = previousClosePrice,
                         openPrice          = openPrice

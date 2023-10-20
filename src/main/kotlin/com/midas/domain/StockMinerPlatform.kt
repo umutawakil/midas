@@ -10,14 +10,11 @@ import org.json.simple.JSONObject
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 /**
  * Platform for polling the market for price updates and executing a strategy/callback against each
- * result for each ticker. This is autility class for other class that want to continuously process real-time
+ * result for each ticker. This is a utility class for other class that want to continuously process real-time
  * market data.
  */
 class StockMinerPlatform {
@@ -38,9 +35,10 @@ class StockMinerPlatform {
     companion object {
         private lateinit var applicationProperties          : ApplicationProperties
         private lateinit var loggingService                 : LoggingService
-        private val          executorService:ExecutorService = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+        private val          executorService:ExecutorService   = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
             LinkedBlockingQueue()
         )
+        private val previousPrices: MutableMap<String, Double> = ConcurrentHashMap()
 
         fun recordRealTimeMarketChangesContinuously(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {
             while (true) {
@@ -72,10 +70,13 @@ class StockMinerPlatform {
             if(hour==9 && minutes < 30) {
                 return false
             }
-            if(hour==11 && minutes >= 30) {
+            /*if(hour==11 && minutes >= 30) {
                 return false
-            }
-            return (hour >= 9) && (hour <= 11)
+            }*/
+            /*if(hour >= 16) {
+                return false
+            }*/
+            return (hour >= 9) && (hour < 16)
         }
 
         private fun download(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {
@@ -83,13 +84,12 @@ class StockMinerPlatform {
                 try {
                     loggingService.log("Requesting data for ranker...")
                     val jsonResult: JSONArray = downloadRecords()["tickers"] as JSONArray
-                    val previousPrices: MutableMap<String, Double> = HashMap()
 
                     for (i in jsonResult.indices) {
                         val prevDayObject          = (jsonResult[i] as JSONObject)["prevDay"]
                         val dayObject              = (jsonResult[i] as JSONObject)["day"]
                         val todaysChangeObject     = (jsonResult[i] as JSONObject)["todaysChange"]
-                        val todaysChangePercObject = (jsonResult[i] as JSONObject)["todaysChangePerc"]
+                        //val todaysChangePercObject = (jsonResult[i] as JSONObject)["todaysChangePerc"]
                         if(prevDayObject == null ||todaysChangeObject == null) {
                             continue
                         }
@@ -98,30 +98,24 @@ class StockMinerPlatform {
                         val previousDayClose = Etl.double((prevDayObject as JSONObject)["c"])
                         val openPrice        = Etl.double((dayObject as JSONObject)["o"])
                         val todaysChange     = Etl.double(todaysChangeObject)
-                        val todaysChangePerc = Etl.double(todaysChangePercObject)
+                        //val todaysChangePerc = Etl.double(todaysChangePercObject)
 
                         val price = Etl.double(previousDayClose + todaysChange)
                         if(price <= 0.1) {
                             continue
                         }
+                        if(openPrice <= 0) {
+                            continue
+                        }
+
                         val previousPrice: Double? = previousPrices[ticker]
-                        val runningDelta: Double   = if(previousPrice == null) { 0.0 } else {100.0*((price - previousPrice) / previousPrice) }
+                        val runningDelta: Double   = if(previousPrice == null || previousPrice == 0.0) { 0.0 } else {100.0*((price - previousPrice) / previousPrice) }
                         previousPrices[ticker]     = price
 
-                        /*Delta.save(
-                            Delta(
-                                ticker             = ticker,
-                                price              = price,
-                                delta              = todaysChangePerc,
-                                runningDelta       = runningDelta,
-                                previousClosePrice = previousDayClose,
-                                openPrice          = openPrice
-                            )
-                        )*/
                         priceUpdateHandlerStrategy.process(
                             ticker             = ticker,
                             price              = price,
-                            delta              = todaysChangePerc,
+                            openDelta          = 100*((price - openPrice) / openPrice),
                             runningDelta       = runningDelta,
                             previousClosePrice = previousDayClose,
                             openPrice          = openPrice
@@ -141,7 +135,7 @@ class StockMinerPlatform {
             fun process(
                 ticker: String,
                 price: Double,
-                delta: Double,
+                openDelta: Double,
                 runningDelta: Double,
                 previousClosePrice: Double,
                 openPrice: Double

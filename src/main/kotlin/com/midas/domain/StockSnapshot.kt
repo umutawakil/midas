@@ -107,6 +107,13 @@ class StockSnapshot {
             return s.price
         }
 
+        fun min(currentPrice: Double, s: StockSnapshot) : Double {
+            if(currentPrice < s.price) {
+                return currentPrice
+            }
+            return s.price
+        }
+
         private fun importSnapShots(dateString: String) {
             executorService.execute {
                 try {
