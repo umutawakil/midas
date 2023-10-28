@@ -35,10 +35,15 @@ class StockMinerPlatform {
     companion object {
         private lateinit var applicationProperties          : ApplicationProperties
         private lateinit var loggingService                 : LoggingService
-        private val          executorService:ExecutorService   = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+        private val          executorService:ExecutorService = ThreadPoolExecutor(
+            1,
+            1,
+            0L,
+            TimeUnit.MILLISECONDS,
             LinkedBlockingQueue()
         )
-        private val previousPrices: MutableMap<String, Double> = ConcurrentHashMap()
+        private val previousPrices: MutableMap<String, Double>  = ConcurrentHashMap()
+        private val previousVolumes: MutableMap<String, Double> = ConcurrentHashMap()
 
         fun recordRealTimeMarketChangesContinuously(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {
             while (true) {
@@ -90,21 +95,22 @@ class StockMinerPlatform {
                         val dayObject              = (jsonResult[i] as JSONObject)["day"]
                         val todaysChangeObject     = (jsonResult[i] as JSONObject)["todaysChange"]
                         //val todaysChangePercObject = (jsonResult[i] as JSONObject)["todaysChangePerc"]
-                        if(prevDayObject == null ||todaysChangeObject == null) {
+                        if (prevDayObject == null || todaysChangeObject == null) {
                             continue
                         }
 
                         val ticker = (jsonResult[i] as JSONObject)["ticker"] as String
                         val previousDayClose = Etl.double((prevDayObject as JSONObject)["c"])
                         val openPrice        = Etl.double((dayObject as JSONObject)["o"])
+                        val dayVolume        = Etl.double((dayObject as JSONObject)["v"])
                         val todaysChange     = Etl.double(todaysChangeObject)
                         //val todaysChangePerc = Etl.double(todaysChangePercObject)
 
                         val price = Etl.double(previousDayClose + todaysChange)
-                        if(price <= 0.1) {
+                        if (price <= 0.1) {
                             continue
                         }
-                        if(openPrice <= 0) {
+                        if (openPrice <= 0) {
                             continue
                         }
 
@@ -117,9 +123,11 @@ class StockMinerPlatform {
                             price              = price,
                             openDelta          = 100*((price - openPrice) / openPrice),
                             runningDelta       = runningDelta,
+                            volume             = if (previousVolumes[ticker] == null) { dayVolume } else { dayVolume - previousVolumes[ticker]!!},
                             previousClosePrice = previousDayClose,
                             openPrice          = openPrice
                         )
+                        previousVolumes[ticker] = dayVolume
                     }
                     loggingService.log("Ranking data.....")
 
@@ -136,6 +144,7 @@ class StockMinerPlatform {
                 ticker: String,
                 price: Double,
                 openDelta: Double,
+                volume: Double,
                 runningDelta: Double,
                 previousClosePrice: Double,
                 openPrice: Double

@@ -13,10 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 @Entity
 @Table(name="stock_snapshot")
@@ -39,15 +36,17 @@ class StockSnapshot {
 
     @Component
     class SpringAdapter(
-        @Autowired val applicationProperties  : ApplicationProperties,
-        @Autowired val stockSnapshotRepository: StockSnapshotRepository,
-        @Autowired val loggingService         : LoggingService
+        @Autowired val applicationProperties      : ApplicationProperties,
+        @Autowired val stockSnapshotRepository    : StockSnapshotRepository,
+        @Autowired val loggingService             : LoggingService,
+        @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
             StockSnapshot.applicationProperties   = applicationProperties
             StockSnapshot.stockSnapshotRepository = stockSnapshotRepository
             StockSnapshot.loggingService          = loggingService
+            tickerSpringAdapter.init()
         }
     }
 
@@ -59,6 +58,7 @@ class StockSnapshot {
             LinkedBlockingQueue()
         )
         private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
+        val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
 
         fun findByDescending(ticker: String) : List<StockSnapshot> {
             if(snapshotMap.isEmpty()) {
@@ -94,6 +94,7 @@ class StockSnapshot {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
+            loggingService.log("Import complete")
         }
 
         fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
@@ -112,6 +113,55 @@ class StockSnapshot {
                 return currentPrice
             }
             return s.price
+        }
+
+        fun calculateMilestones() {
+            var c = 0
+            for (t: String in Ticker.getTickers()) { loggingService.log("Ticker: $c")
+                c++
+                val snapshots: List<StockSnapshot> = findByDescending(ticker = t)
+                for (w in WINDOWS) {
+                    var maxDelta = 0.0
+                    var maxPrice = 0.0
+                    var minPrice = Double.MAX_VALUE
+                    var minDelta = Double.MAX_VALUE
+                    var averageVolume = 0.0
+
+                    for (i in 1 until w) {
+                        if (i >= snapshots.size) {break}
+                        val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
+                        if (currentDelta > maxDelta) {
+                            maxDelta = currentDelta
+                        }
+                        if (currentDelta < minDelta) {
+                            minDelta = currentDelta
+                        }
+
+                        maxPrice = max(currentPrice = maxPrice, s = snapshots[i - 1])
+                        minPrice = min(currentPrice = minPrice, s = snapshots[i - 1])
+                        averageVolume += snapshots[i - 1].volume
+                    }
+                    averageVolume /= w
+
+                    var windowDelta = 0.0
+                    if(snapshots.size >= w) {
+                        windowDelta = delta(x2 = snapshots[0], x1 = snapshots[w - 1])
+                    }
+                    Milestone.save(
+                        Milestone(
+                            ticker        = t,
+                            minPrice      = minPrice,
+                            maxPrice      = maxPrice,
+                            maxDelta      = maxDelta,
+                            minDelta      = minDelta,
+                            averageVolume = averageVolume,
+                            windowDelta   = windowDelta,
+                            timeWindow    = w,
+                            count         = snapshots.size
+                        )
+                    )
+                }
+            }
         }
 
         private fun importSnapShots(dateString: String) {

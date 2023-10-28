@@ -18,6 +18,7 @@ class Delta {
     private val ticker: String
     private val price: Double
     private val openDelta: Double
+    private val volume: Double
     private val runningDelta: Double
     private val previousClosePrice: Double
     private val openPrice: Double
@@ -25,6 +26,7 @@ class Delta {
         ticker: String,
         price: Double,
         openDelta: Double,
+        volume: Double,
         runningDelta: Double,
         previousClosePrice: Double,
         openPrice: Double
@@ -32,6 +34,7 @@ class Delta {
         this.ticker             = ticker
         this.price              = price
         this.openDelta          = openDelta
+        this.volume             = volume
         this.runningDelta       = runningDelta
         this.previousClosePrice = previousClosePrice
         this.openPrice          = openPrice
@@ -69,6 +72,7 @@ class Delta {
                 ticker: String,
                 price: Double,
                 openDelta: Double,
+                volume: Double,
                 runningDelta: Double,
                 previousClosePrice: Double,
                 openPrice: Double
@@ -78,6 +82,7 @@ class Delta {
                         ticker             = ticker,
                         price              = price,
                         openDelta          = openDelta,
+                        volume             = volume,
                         runningDelta       = runningDelta,
                         previousClosePrice = previousClosePrice,
                         openPrice          = openPrice
