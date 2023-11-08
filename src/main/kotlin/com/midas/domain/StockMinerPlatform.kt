@@ -60,7 +60,8 @@ class StockMinerPlatform {
         }
 
         private fun isMarketOpen() : Boolean {
-            val calendar = Calendar.getInstance()
+            return true
+            /*val calendar = Calendar.getInstance()
             calendar.timeZone = TimeZone.getTimeZone("America/New_York")
             val dayOfTheWeek: Int = calendar[Calendar.DAY_OF_WEEK]
             if (dayOfTheWeek == 1 || dayOfTheWeek == 7) {
@@ -81,7 +82,7 @@ class StockMinerPlatform {
             /*if(hour >= 16) {
                 return false
             }*/
-            return (hour >= 9) && (hour < 16)
+            return (hour >= 9) && (hour < 16)*/
         }
 
         private fun download(priceUpdateHandlerStrategy: PriceUpdateHandlerStrategy) {

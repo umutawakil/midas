@@ -35,7 +35,56 @@ CREATE TABLE `delta` (
   `insert_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `volume` double NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1357352 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2808186 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `financials`
+--
+
+DROP TABLE IF EXISTS `financials`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `financials` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `ticker` varchar(45) NOT NULL,
+  `asset_delta` double NOT NULL,
+  `liability_delta` double NOT NULL,
+  `book_value_delta` double NOT NULL,
+  `eps` double NOT NULL,
+  `market_capitalization` double NOT NULL,
+  `shares_outstanding` bigint NOT NULL,
+  `cash_burn_percentage` double NOT NULL,
+  `equity_burn_percentage` double NOT NULL,
+  `current_equity_burn_percentage` double NOT NULL,
+  `cash_on_hand` double NOT NULL,
+  `cash_on_hand_change` double NOT NULL,
+  `total_assets` double NOT NULL,
+  `total_current_assets` double NOT NULL,
+  `total_liabilities` double NOT NULL,
+  `book_value` double NOT NULL,
+  `last_report_date` date NOT NULL,
+  `insertion_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `exchange` varchar(45) NOT NULL,
+  `industry` varchar(200) NOT NULL,
+  `sector` varchar(200) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ticker_UNIQUE` (`ticker`)
+) ENGINE=InnoDB AUTO_INCREMENT=16043 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ignore_ticker`
+--
+
+DROP TABLE IF EXISTS `ignore_ticker`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ignore_ticker` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=19110 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -57,7 +106,7 @@ CREATE TABLE `milestone` (
   `count` int NOT NULL,
   `average_volume` double NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1565881 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2462106 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -75,7 +124,7 @@ CREATE TABLE `stock_snapshot` (
   `creation_date` date NOT NULL,
   `time_imported` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26899802 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=59889196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -94,62 +143,37 @@ CREATE TABLE `ticker` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Temporary view structure for view `v_core_milestone`
+-- Temporary view structure for view `v_financials`
 --
 
-DROP TABLE IF EXISTS `v_core_milestone`;
-/*!50001 DROP VIEW IF EXISTS `v_core_milestone`*/;
+DROP TABLE IF EXISTS `v_financials`;
+/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_core_milestone` AS SELECT 
+/*!50001 CREATE VIEW `v_financials` AS SELECT 
+ 1 AS `id`,
  1 AS `ticker`,
- 1 AS `price`,
- 1 AS `open_delta`,
- 1 AS `running_delta`,
- 1 AS `perc_max_price`,
- 1 AS `perc_min_price`,
- 1 AS `perc_rmax_delta`,
- 1 AS `max_price`,
- 1 AS `min_price`,
- 1 AS `min_delta`,
- 1 AS `perc_max_delta`,
- 1 AS `perc_min_delta`,
- 1 AS `max_delta`,
- 1 AS `average_volume`,
- 1 AS `expected_volume`,
- 1 AS `volume_deviation_estimate`,
- 1 AS `window_delta`,
- 1 AS `time_window`,
- 1 AS `time_offset(mins)`,
- 1 AS `count`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_dark_milestone`
---
-
-DROP TABLE IF EXISTS `v_dark_milestone`;
-/*!50001 DROP VIEW IF EXISTS `v_dark_milestone`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_dark_milestone` AS SELECT 
- 1 AS `ticker`,
- 1 AS `price`,
- 1 AS `open_delta`,
- 1 AS `running_delta`,
- 1 AS `perc_min_price`,
- 1 AS `perc_max_price`,
- 1 AS `perc_rmax_delta`,
- 1 AS `min_price`,
- 1 AS `max_price`,
- 1 AS `min_delta`,
- 1 AS `perc_max_delta`,
- 1 AS `perc_min_delta`,
- 1 AS `max_delta`,
- 1 AS `window_delta`,
- 1 AS `time_window`,
- 1 AS `time_offset(mins)`,
- 1 AS `count`*/;
+ 1 AS `asset_delta`,
+ 1 AS `liability_delta`,
+ 1 AS `book_value_delta`,
+ 1 AS `equity_ratio`,
+ 1 AS `eps`,
+ 1 AS `market_capitalization`,
+ 1 AS `shares_outstanding`,
+ 1 AS `cash_burn_percentage`,
+ 1 AS `equity_burn_percentage`,
+ 1 AS `current_equity_burn_percentage`,
+ 1 AS `cash_on_hand`,
+ 1 AS `cash_on_hand_change`,
+ 1 AS `total_assets`,
+ 1 AS `total_current_assets`,
+ 1 AS `total_liabilities`,
+ 1 AS `book_value`,
+ 1 AS `last_report_date`,
+ 1 AS `insertion_time`,
+ 1 AS `exchange`,
+ 1 AS `industry`,
+ 1 AS `sector`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -170,38 +194,25 @@ SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `v_milestone`
+-- Table structure for table `volatile_stocks`
 --
 
-DROP TABLE IF EXISTS `v_milestone`;
-/*!50001 DROP VIEW IF EXISTS `v_milestone`*/;
-SET @saved_cs_client     = @@character_set_client;
+DROP TABLE IF EXISTS `volatile_stocks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_milestone` AS SELECT 
- 1 AS `ticker`,
- 1 AS `price`,
- 1 AS `open_delta`,
- 1 AS `running_delta`,
- 1 AS `perc_max_price`,
- 1 AS `perc_rmax_delta`,
- 1 AS `max_price`,
- 1 AS `min_delta`,
- 1 AS `perc_max_delta`,
- 1 AS `max_delta`,
- 1 AS `average_volume`,
- 1 AS `expected_volume`,
- 1 AS `volume_deviation_estimate`,
- 1 AS `window_delta`,
- 1 AS `time_window`,
- 1 AS `time_offset(mins)`,
- 1 AS `count`*/;
-SET character_set_client = @saved_cs_client;
+CREATE TABLE `volatile_stocks` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `ticker` varchar(45) NOT NULL,
+  `investment_date` date NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Final view structure for view `v_core_milestone`
+-- Final view structure for view `v_financials`
 --
 
-/*!50001 DROP VIEW IF EXISTS `v_core_milestone`*/;
+/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
@@ -210,25 +221,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_core_milestone` AS select `t1`.`ticker` AS `ticker`,`t1`.`price` AS `price`,`t1`.`open_delta` AS `open_delta`,`t1`.`running_delta` AS `running_delta`,`t1`.`perc_max_price` AS `perc_max_price`,`t1`.`perc_min_price` AS `perc_min_price`,`t1`.`perc_rmax_delta` AS `perc_rmax_delta`,`t1`.`max_price` AS `max_price`,`t1`.`min_price` AS `min_price`,`t1`.`min_delta` AS `min_delta`,`t1`.`perc_max_delta` AS `perc_max_delta`,`t1`.`perc_min_delta` AS `perc_min_delta`,`t1`.`max_delta` AS `max_delta`,`t1`.`average_volume` AS `average_volume`,`t1`.`expected_volume` AS `expected_volume`,(100.0 * (`t1`.`volume` / `t1`.`expected_volume`)) AS `volume_deviation_estimate`,`t1`.`window_delta` AS `window_delta`,`t1`.`time_window` AS `time_window`,`t1`.`time_offset(mins)` AS `time_offset(mins)`,`t1`.`count` AS `count` from (select `d`.`ticker` AS `ticker`,`d`.`price` AS `price`,`d`.`open_delta` AS `open_delta`,`d`.`running_delta` AS `running_delta`,`d`.`volume` AS `volume`,(100.0 * (`d`.`price` / `m`.`max_price`)) AS `perc_max_price`,(100.0 * (`d`.`price` / `m`.`min_price`)) AS `perc_min_price`,(100.0 * (`d`.`running_delta` / `m`.`max_delta`)) AS `perc_rmax_delta`,(100.0 * (`d`.`open_delta` / `m`.`max_delta`)) AS `perc_max_delta`,(100.0 * (`d`.`open_delta` / `m`.`min_delta`)) AS `perc_min_delta`,`m`.`time_window` AS `time_window`,`m`.`count` AS `count`,`m`.`max_price` AS `max_price`,`m`.`min_price` AS `min_price`,`m`.`max_delta` AS `max_delta`,`m`.`min_delta` AS `min_delta`,`m`.`average_volume` AS `average_volume`,(`m`.`average_volume` / 26) AS `expected_volume`,`m`.`window_delta` AS `window_delta`,timestampdiff(MINUTE,`d`.`insert_time`,now()) AS `time_offset(mins)` from (`milestone` `m` join (select `d1`.`id` AS `id`,`d1`.`ticker` AS `ticker`,`d1`.`price` AS `price`,`d1`.`volume` AS `volume`,`d1`.`open_delta` AS `open_delta`,`d1`.`running_delta` AS `running_delta`,`d1`.`previous_close_price` AS `previous_close_price`,`d1`.`open_price` AS `open_price`,`d1`.`insert_time` AS `insert_time`,`d2`.`symbol` AS `symbol`,`d2`.`max_time` AS `max_time` from (`delta` `d1` join (select `d3`.`ticker` AS `symbol`,max(`d3`.`insert_time`) AS `max_time` from `delta` `d3` group by `symbol`) `d2` on(((`d1`.`ticker` = `d2`.`symbol`) and (`d1`.`insert_time` = `d2`.`max_time`))))) `d` on((`m`.`ticker` = `d`.`ticker`)))) `t1` where ((`t1`.`time_window` >= 20) and (`t1`.`count` >= 20)) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_dark_milestone`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_dark_milestone`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_dark_milestone` AS select `v_core_milestone`.`ticker` AS `ticker`,`v_core_milestone`.`price` AS `price`,`v_core_milestone`.`open_delta` AS `open_delta`,`v_core_milestone`.`running_delta` AS `running_delta`,`v_core_milestone`.`perc_min_price` AS `perc_min_price`,`v_core_milestone`.`perc_max_price` AS `perc_max_price`,`v_core_milestone`.`perc_rmax_delta` AS `perc_rmax_delta`,`v_core_milestone`.`min_price` AS `min_price`,`v_core_milestone`.`max_price` AS `max_price`,`v_core_milestone`.`min_delta` AS `min_delta`,`v_core_milestone`.`perc_max_delta` AS `perc_max_delta`,`v_core_milestone`.`perc_min_delta` AS `perc_min_delta`,`v_core_milestone`.`max_delta` AS `max_delta`,`v_core_milestone`.`window_delta` AS `window_delta`,`v_core_milestone`.`time_window` AS `time_window`,`v_core_milestone`.`time_offset(mins)` AS `time_offset(mins)`,`v_core_milestone`.`count` AS `count` from `v_core_milestone` where (`v_core_milestone`.`min_price` > `v_core_milestone`.`price`) */;
+/*!50001 VIEW `v_financials` AS select `f`.`id` AS `id`,`f`.`ticker` AS `ticker`,`f`.`asset_delta` AS `asset_delta`,`f`.`liability_delta` AS `liability_delta`,`f`.`book_value_delta` AS `book_value_delta`,(`f`.`total_assets` / `f`.`total_liabilities`) AS `equity_ratio`,`f`.`eps` AS `eps`,`f`.`market_capitalization` AS `market_capitalization`,`f`.`shares_outstanding` AS `shares_outstanding`,`f`.`cash_burn_percentage` AS `cash_burn_percentage`,`f`.`equity_burn_percentage` AS `equity_burn_percentage`,`f`.`current_equity_burn_percentage` AS `current_equity_burn_percentage`,`f`.`cash_on_hand` AS `cash_on_hand`,`f`.`cash_on_hand_change` AS `cash_on_hand_change`,`f`.`total_assets` AS `total_assets`,`f`.`total_current_assets` AS `total_current_assets`,`f`.`total_liabilities` AS `total_liabilities`,`f`.`book_value` AS `book_value`,`f`.`last_report_date` AS `last_report_date`,`f`.`insertion_time` AS `insertion_time`,`f`.`exchange` AS `exchange`,`f`.`industry` AS `industry`,`f`.`sector` AS `sector` from `financials` `f` where ((abs(`f`.`cash_burn_percentage`) <= 1000.0) and (`f`.`market_capitalization` <> 0) and (`f`.`shares_outstanding` <> 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -250,24 +243,6 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_milestone`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_milestone`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_milestone` AS select `t1`.`ticker` AS `ticker`,`t1`.`price` AS `price`,`t1`.`open_delta` AS `open_delta`,`t1`.`running_delta` AS `running_delta`,`t1`.`perc_max_price` AS `perc_max_price`,`t1`.`perc_rmax_delta` AS `perc_rmax_delta`,`t1`.`max_price` AS `max_price`,`t1`.`min_delta` AS `min_delta`,`t1`.`perc_max_delta` AS `perc_max_delta`,`t1`.`max_delta` AS `max_delta`,`t1`.`average_volume` AS `average_volume`,`t1`.`expected_volume` AS `expected_volume`,(100.0 * (`t1`.`volume` / `t1`.`expected_volume`)) AS `volume_deviation_estimate`,`t1`.`window_delta` AS `window_delta`,`t1`.`time_window` AS `time_window`,`t1`.`time_offset(mins)` AS `time_offset(mins)`,`t1`.`count` AS `count` from (select `d`.`ticker` AS `ticker`,`d`.`price` AS `price`,`d`.`open_delta` AS `open_delta`,`d`.`volume` AS `volume`,`d`.`running_delta` AS `running_delta`,(100.0 * (`d`.`price` / `m`.`max_price`)) AS `perc_max_price`,(100.0 * (`d`.`running_delta` / `m`.`max_delta`)) AS `perc_rmax_delta`,(100.0 * (`d`.`open_delta` / `m`.`max_delta`)) AS `perc_max_delta`,`m`.`time_window` AS `time_window`,`m`.`count` AS `count`,`m`.`max_price` AS `max_price`,`m`.`max_delta` AS `max_delta`,`m`.`min_delta` AS `min_delta`,`m`.`average_volume` AS `average_volume`,(`m`.`average_volume` / 26) AS `expected_volume`,`m`.`window_delta` AS `window_delta`,timestampdiff(MINUTE,`d`.`insert_time`,now()) AS `time_offset(mins)` from (`milestone` `m` join (select `d1`.`id` AS `id`,`d1`.`ticker` AS `ticker`,`d1`.`price` AS `price`,`d1`.`volume` AS `volume`,`d1`.`open_delta` AS `open_delta`,`d1`.`running_delta` AS `running_delta`,`d1`.`previous_close_price` AS `previous_close_price`,`d1`.`open_price` AS `open_price`,`d1`.`insert_time` AS `insert_time`,`d2`.`symbol` AS `symbol`,`d2`.`max_time` AS `max_time` from (`delta` `d1` join (select `d3`.`ticker` AS `symbol`,max(`d3`.`insert_time`) AS `max_time` from `delta` `d3` group by `symbol`) `d2` on(((`d1`.`ticker` = `d2`.`symbol`) and (`d1`.`insert_time` = `d2`.`max_time`))))) `d` on((`m`.`ticker` = `d`.`ticker`)))) `t1` where ((`t1`.`perc_max_price` >= 100.0) and (`t1`.`time_window` >= 20) and (`t1`.`count` >= 20)) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -278,4 +253,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-10-21 13:54:30
+-- Dump completed on 2023-11-08 12:24:30

@@ -14,6 +14,8 @@ class ApplicationProperties {
     val isNotIntegrationTest   : Boolean
     val pollIntervalMins       : Int
     val runStockSnapshotImport : Boolean
+    val financialsApiUrl       : String
+    val financialsApiKey       : String
 
     constructor(
             runIntraDayStockService: Boolean,
@@ -25,7 +27,9 @@ class ApplicationProperties {
             errorDirectory         : String,
             isNotIntegrationTest   : Boolean,
             pollIntervalMins       : Int,
-            runStockSnapshotImport : Boolean
+            runStockSnapshotImport : Boolean,
+            financialsApiUrl       : String,
+            financialsApiKey       : String
     ) {
         this.runIntraDayStockService = runIntraDayStockService
         this.polygonBaseUrl          = polygonBaseUrl
@@ -37,5 +41,7 @@ class ApplicationProperties {
         this.isNotIntegrationTest    = isNotIntegrationTest
         this.pollIntervalMins        = pollIntervalMins
         this.runStockSnapshotImport  = runStockSnapshotImport
+        this.financialsApiUrl        = financialsApiUrl
+        this.financialsApiKey        = financialsApiKey
     }
 }

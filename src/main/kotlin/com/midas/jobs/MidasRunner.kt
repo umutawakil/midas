@@ -18,7 +18,8 @@ class MidasRunner {
         @Autowired private val deltaSpringAdapter: Delta.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
         @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
-        @Autowired private val milestoneSpringAdapter: Milestone.SpringAdapter
+        @Autowired private val milestoneSpringAdapter: Milestone.SpringAdapter,
+        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
@@ -32,9 +33,15 @@ class MidasRunner {
             /** Ticker job---------------------------------------- **/
             //tickerSpringAdapter.init()
 
+
+            /** Financials Job ------------------------------------**/
+            /*financialsSpringAdapter.init()
+            Financials.import()*/
+
+
             /** Historical StockSnapshot JOb--------------------**/
-            stockSnapshotSpringAdapter.init()
-            StockSnapshot.populatePastOneYearSnapshots()
+            /*stockSnapshotSpringAdapter.init()
+            StockSnapshot.populatePastOneYearSnapshots()*/
 
             /** Milestone calculation job **/
             /*stockSnapshotSpringAdapter.init()
