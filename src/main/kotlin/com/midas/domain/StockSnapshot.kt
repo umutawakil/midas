@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.*
+import kotlin.math.abs
 
 @Entity
 @Table(name="stock_snapshot")
@@ -59,18 +60,20 @@ class StockSnapshot {
         )
         private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
         val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
+        private val activeTickers: MutableSet<String> = HashSet()
 
         fun findByDescending(ticker: String) : List<StockSnapshot> {
             if(snapshotMap.isEmpty()) {
-                loadMap()
+                buildTickerSnapshotMap()
             }
             return snapshotMap[ticker] ?: emptyList()
         }
-        private fun loadMap() {
-            println("Loading tickers.....")
+        private fun buildTickerSnapshotMap() {
+            println("Mapping snapshots to tickers.....")
             val results: List<StockSnapshot> = stockSnapshotRepository.findAll().toList()
             for(r in results) {
-                snapshotMap.computeIfAbsent(r.ticker) { mutableListOf()}.add(r)
+                snapshotMap.computeIfAbsent(r.ticker.uppercase()) { mutableListOf()}.add(r)
+                activeTickers.add(r.ticker.uppercase())
             }
             for(k in snapshotMap.keys) {
                 snapshotMap[k] = snapshotMap[k]!!.sortedByDescending { it.creationDate }.toMutableList()
@@ -94,7 +97,6 @@ class StockSnapshot {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
-            loggingService.log("Import complete")
         }
 
         fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
@@ -115,21 +117,50 @@ class StockSnapshot {
             return s.price
         }
 
-        fun calculateMilestones() {
-            var c = 0
-            for (t: String in Ticker.getTickers()) { loggingService.log("Ticker: $c")
+        fun calculateStatistics() {
+            buildTickerSnapshotMap() //TODO: This populates the tickersnapshot map but also activeTickers. Needs to be broken up
+            var c                           = 0
+            var newTickers                  = 0
+            var staleTickers                = 0
+            val tickers: MutableSet<String> = HashSet(Ticker.getTickers())
+            val oldNumTickers               = tickers.size
+            val activeTickersSize           = activeTickers.size
+            loggingService.log("Adding new tickers...")
+            for (t0 in activeTickers) {
+                if (!tickers.contains(t0)) {
+                    Ticker.save(t0)
+                    tickers.add(t0)
+                    newTickers++
+                }
+            }
+            loggingService.log("New tickers added: $newTickers")
+
+            loggingService.log("Removing stale tickers...")
+            /*Remove stale tickers **/
+            for(t1 in tickers) {
+                if(!activeTickers.contains(t1)) {
+                    Ticker.delete(t1)
+                    staleTickers++
+                }
+            }
+            loggingService.log("Stale tickers removed: $staleTickers")
+
+            for (t: String in tickers) { loggingService.log("Ticker: $c")
                 c++
                 val snapshots: List<StockSnapshot> = findByDescending(ticker = t)
                 for (w in WINDOWS) {
-                    var maxDelta = 0.0
-                    var maxPrice = 0.0
-                    var minPrice = Double.MAX_VALUE
-                    var minDelta = Double.MAX_VALUE
-                    var averageVolume = 0.0
+                    var maxDelta         = 0.0
+                    var maxPrice         = 0.0
+                    var minPrice         = Double.MAX_VALUE
+                    var minDelta         = Double.MAX_VALUE
+                    var averageVolume    = 0.0
+                    var averageDelta     = 0.0
+                    var averageDeviation = 0.0
 
                     for (i in 1 until w) {
                         if (i >= snapshots.size) {break}
                         val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
+                        averageDelta += currentDelta
                         if (currentDelta > maxDelta) {
                             maxDelta = currentDelta
                         }
@@ -142,26 +173,42 @@ class StockSnapshot {
                         averageVolume += snapshots[i - 1].volume
                     }
                     averageVolume /= w
+                    averageDelta  /= w
+
+                    for (i in 1 until w) {
+                        if (i >= snapshots.size) {break}
+                        val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
+                        //if(averageDelta != 0.0) {
+                            averageDeviation += abs(averageDelta - currentDelta)//(100 * abs(averageDelta - currentDelta)) / averageDelta
+                        //}
+                    }
+                    averageDeviation /= w
 
                     var windowDelta = 0.0
                     if(snapshots.size >= w) {
                         windowDelta = delta(x2 = snapshots[0], x1 = snapshots[w - 1])
                     }
-                    Milestone.save(
-                        Milestone(
-                            ticker        = t,
-                            minPrice      = minPrice,
-                            maxPrice      = maxPrice,
-                            maxDelta      = maxDelta,
-                            minDelta      = minDelta,
-                            averageVolume = averageVolume,
-                            windowDelta   = windowDelta,
-                            timeWindow    = w,
-                            count         = snapshots.size
+                    Statistics.save(
+                        Statistics(
+                            ticker           = t,
+                            minPrice         = minPrice,
+                            maxPrice         = maxPrice,
+                            maxDelta         = maxDelta,
+                            minDelta         = minDelta,
+                            averageDelta     = averageDelta,
+                            averageDeviation = averageDeviation,
+                            averageVolume    = averageVolume,
+                            windowDelta      = windowDelta,
+                            timeWindow       = w,
+                            count            = snapshots.size
                         )
                     )
                 }
             }
+            loggingService.log("New tickers: $newTickers")
+            loggingService.log("Old number of tickers: $oldNumTickers")
+            loggingService.log("Active tickers: $activeTickersSize")
+            loggingService.log("Stale tickers removed: $staleTickers")
         }
 
         private fun importSnapShots(dateString: String) {
@@ -193,7 +240,7 @@ class StockSnapshot {
 
             }.map {
                 StockSnapshot(
-                    ticker       = (it as JSONObject)["T"] as String,
+                    ticker       = ((it as JSONObject)["T"] as String).uppercase(),
                     price        = Etl.double(it["c"]),
                     volume       = Etl.integer(it["v"]),
                     creationDate = creationDate

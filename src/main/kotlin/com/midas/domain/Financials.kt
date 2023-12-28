@@ -2,17 +2,20 @@ package com.midas.domain
 
 import com.midas.configuration.ApplicationProperties
 import com.midas.repositories.FinancialsRepository
+import com.midas.repositories.SecIgnoredEntityRepository
 import com.midas.services.LoggingService
-import com.midas.utilities.Etl
-import com.midas.utilities.HttpUtility
 import jakarta.annotation.PostConstruct
 import jakarta.persistence.*
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
+import org.json.simple.parser.JSONParser
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.text.SimpleDateFormat
-import java.util.*
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
+import kotlin.collections.HashMap
+import kotlin.io.path.name
 
 @Entity
 @Table(name="financials")
@@ -21,213 +24,398 @@ class Financials {
     @Column(name="id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private val id                          : Long = -1L
-    private val exchange                    : String
-    private val sector                      : String
-    private val industry                    : String
+    private val secSectorCode               : Int?
+    private val cik                         : Long
     private val ticker                      : String
-    private val eps                         : Double
-    private val marketCapitalization        : Double
-    private val sharesOutstanding           : Long
-    
-    private val cashBurnPercentage          : Double
-    private val equityBurnPercentage        : Double
-    private val currentEquityBurnPercentage : Double
-    private val assetDelta                  : Double
-    private val liabilityDelta              : Double
-    private val bookValueDelta              : Double
+    private val fiscalYear                  : Int?
+    private val fiscalPeriod                : String?
 
-    //private val changeInCash                : Double
-    private val cashOnHand                  : Double
-    private val cashOnHandChange            : Double
-    private val totalAssets                 : Double
-    private val totalCurrentAssets          : Double
-    private val totalLiabilities            : Double
-    private val bookValue                   : Double
-    private val lastReportDate              : Date
+    private val netIncome                   : Double?
+    private val revenue                     : Double?
+    private val epsBasic                    : Double?
+    private val epsDiluted                  : Double?
+    private val sharesOutstanding           : Long?
+
+    private val totalAssets                 : Double?
+    private val totalCurrentAssets          : Double?
+    private val totalCash                   : Double?
+    private val cashAndCashEquivalents      : Double?
+    private val totalCurrentLiabilities     : Double?
+    private val totalLiabilities            : Double?
+    private val totalEquity                 : Double?
+    private val workingCapital              : Double?
+
+    private val operatingCashFlow           : Double?
+    private val investingCashFlow           : Double?
+    private val financingCashFlow           : Double?
+    private val netChangeInCash             : Double?
 
     constructor(
-        exchange: String,
         ticker: String,
-        sector: String,
-        industry: String,
-        eps: Double,
-        marketCapitalization: Double,
-        sharesOutstanding: Long,
-        cashBurnPercentage: Double,
-        equityBurnPercentage: Double,
-        currentEquityBurnPercentage: Double,
-        assetDelta: Double,
-        liabilityDelta: Double,
-        bookValueDelta: Double,
-        cashOnHand: Double,
-        cashOnHandChange: Double,
-        totalAssets: Double,
-        totalCurrentAssets: Double,
-        totalLiabilities: Double,
-        bookValue: Double,
-        lastReportDate: Date
-    ) {
+        fiscalYear: Int?,
+        fiscalPeriod: String?,
+        secSectorCode: Int?,
+        cik: Long,
+        netIncome: Double?,
+        revenue: Double?,
+        epsBasic: Double?,
+        epsDiluted: Double?,
+        sharesOutstanding: Long?,
 
-        this.exchange                    = exchange
+        totalAssets: Double?,
+        totalCurrentAssets: Double?,
+        totalCash: Double?,
+        cashAndCashEquivalents: Double?,
+        totalCurrentLiabilities: Double?,
+        totalLiabilities: Double?,
+        totalEquity: Double?,
+        workingCapital: Double?,
+
+        operatingCashFlow: Double?,
+        investingCashFlow: Double?,
+        financingCashFlow: Double?,
+        netChangeInCash: Double?
+    ) {
         this.ticker                      = ticker
-        this.sector                      = sector
-        this.industry                    = industry
-        this.eps                         = eps
-        this.marketCapitalization        = marketCapitalization
+        this.secSectorCode               = secSectorCode
+        this.cik                         = cik
+        this.fiscalYear                  = fiscalYear
+        this.fiscalPeriod                = fiscalPeriod
+
+        this.netIncome                   = netIncome
+        this.revenue                     = revenue
+        this.epsBasic                    = epsBasic
+        this.epsDiluted                  = epsDiluted
         this.sharesOutstanding           = sharesOutstanding
-        this.cashBurnPercentage          = cashBurnPercentage
-        this.equityBurnPercentage        = equityBurnPercentage
-        this.currentEquityBurnPercentage = currentEquityBurnPercentage
-        this.cashOnHand                  = cashOnHand
-        this.cashOnHandChange            = cashOnHandChange
-        this.assetDelta                  = assetDelta
-        this.liabilityDelta              = liabilityDelta
-        this.bookValueDelta              = bookValueDelta
+
         this.totalAssets                 = totalAssets
         this.totalCurrentAssets          = totalCurrentAssets
+        this.totalCash                   = totalCash
+        this.cashAndCashEquivalents      = cashAndCashEquivalents
+        this.totalCurrentLiabilities     = totalCurrentLiabilities
         this.totalLiabilities            = totalLiabilities
-        this.bookValue                   = bookValue
-        this.lastReportDate              = lastReportDate
+        this.totalEquity                 = totalEquity
+        this.workingCapital              = workingCapital
 
+        this.operatingCashFlow           = operatingCashFlow
+        this.investingCashFlow           = investingCashFlow
+        this.financingCashFlow           = financingCashFlow
+        this.netChangeInCash             = netChangeInCash
     }
     @Component
     class SpringAdapter(
         @Autowired private val financialsRepository: FinancialsRepository,
-        @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
-        @Autowired private val ignoreTickerSpringAdapter: IgnoreTicker.SpringAdapter,
+        @Autowired private val secIgnoredEntityRepository: SecIgnoredEntityRepository,
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val loggingService: LoggingService
     ) {
         @PostConstruct
         fun init() {
-            Financials.applicationProperties = applicationProperties
-            Financials.financialsRepository  = financialsRepository
-            Financials.loggingService        = loggingService
-
-            tickerSpringAdapter.init()
-            ignoreTickerSpringAdapter.init()
+            Financials.applicationProperties      = applicationProperties
+            Financials.loggingService             = loggingService
+            Financials.financialsRepository       = financialsRepository
+            Financials.secIgnoredEntityRepository = secIgnoredEntityRepository
         }
     }
 
     companion object {
         private lateinit var financialsRepository: FinancialsRepository
         private lateinit var applicationProperties: ApplicationProperties
+        private lateinit var secIgnoredEntityRepository: SecIgnoredEntityRepository
         private lateinit var loggingService: LoggingService
-        private const val TIME_PER_REQUEST = 2000//50 // 50 ms per request, 20 per second, 1200 per minute
+
+        private const val MINIMUM_YEAR = 2023
+
         fun import() {
-            val completedTickers: Set<String> = financialsRepository.findAll().map { it.ticker}.toSet()
-            val ignoreTickers: Set<String>    = IgnoreTicker.tickers()
-            var start = System.currentTimeMillis()
-            var count = 0
+            loggingService.log("Importing financials...")
+            //financialsRepository.deleteEvery() //Using the built-in deleteAll method is slow because it looks like it does a select All first...
+            loggingService.log("Previous records deleted....")
 
-            loggingService.log("Ignore: " + ignoreTickers.size + ", completed: " + completedTickers.size)
+            /*TODO: These two can be consolidated into one perhaps but it will require re running multiple times and
+            * without memoization this runs very slow. To save time two structures are utilized
+            * */
+            loggingService.log("Getting ignore data...")
+            val ignoreEntityMap: MutableSet<Long?>         = secIgnoredEntityRepository.findAll().map {it.cik }.toMutableSet()
+            val ignoreEntityMapByName: MutableSet<String?> = secIgnoredEntityRepository.findAll().map {it.fileName }.toMutableSet()
+            loggingService.log("Ignore data retrieved...")
 
-            for (t in Ticker.getTickers()) {
-                try {
-                    if (!(completedTickers.contains(t) || ignoreTickers.contains(t))) {
-                        val elapsedTime = System.currentTimeMillis() - start
-                        if (elapsedTime >= TIME_PER_REQUEST) {
-                            importForTicker(ticker = t)
-                            start = System.currentTimeMillis()
-                            count++
-                            loggingService.log("count: $count, ticker: $t")
+            var metaRecords            = 0
+            var metaRecordsFailed      = 0
+            var metaRecordsBadFileName = 0
+            var financialRecords       = 0
+            var financialRecordsFailed = 0
 
+            for(s in Files.list(Paths.get("${applicationProperties.financialsDirectory}/submissions")).toList()) {
+                val fileName = s.fileName.name//"CIK0001867066.json"//
+                if ((!ignoreEntityMapByName.contains(fileName)) && isCorrectMetaFile(fileName)) {
+                    val cik = fileNameToCikCode(fileName = fileName)
+                    if(!ignoreEntityMap.contains(cik)) {
+                        val metaData: JSONObject = fileToJson(file = s.toFile())//fileToJson(file = File("${applicationProperties.financialsDirectory}/submissions/$fileName"))
+                        /*if((metaData["exchanges"] as JSONArray).contains("OTC")) {
+                            continue
+                        }*/
+                        if ((metaData["tickers"] as JSONArray).size > 0) {
+                            metaRecords++
+                            loggingService.log("Meta records: $metaRecords, Meta file pre-processed: $fileName")
+
+                            for (t in metaData["tickers"] as JSONArray) {
+                                val financialFile = File("${applicationProperties.financialsDirectory}/companyfacts/$fileName")
+                                if (financialFile.exists()) {
+                                    createFinancialsRecordsForTicker(
+                                        ticker        = t as String,
+                                        metaData      = metaData,
+                                        financialData = fileToJson(file = financialFile)
+                                    )
+
+                                    financialRecords++
+                                    loggingService.log("Financial records: $financialRecords")
+                                } else {
+                                    financialRecordsFailed++
+                                    loggingService.log("Financial record file does not exist ($fileName)...Failed financial records: $financialRecordsFailed")
+                                }
+                            }
                         } else {
-                            Thread.sleep(TIME_PER_REQUEST - elapsedTime)
-                            importForTicker(ticker = t)
-                            start = System.currentTimeMillis()
-                            count++
-                            loggingService.log("count: $count, ticker: $t")
+                            metaRecordsFailed++
+                            /* TODO: This save makes the application skip non-ticker entity files for every or until the ignore database is cleared and re-run **/
+                            secIgnoredEntityRepository.save(SecIgnoredEntity(cik = cik, fileName = fileName))
+                            loggingService.log("Meta records failed: $metaRecordsFailed")
                         }
                     }
-                } catch(e: Exception) {
-                    loggingService.log("Error: $t")
-                    e.printStackTrace()
-                    IgnoreTicker.save(t)
+                } else {
+                    /*If the fileName is already in the ignore list don't save it again and don't alert it to the screen */
+                    if ( !ignoreEntityMapByName.contains(fileName)) {
+                        metaRecordsBadFileName++
+                        secIgnoredEntityRepository.save(SecIgnoredEntity(cik = null, fileName = fileName))
+                        loggingService.log("Meta records bad file name: $metaRecordsBadFileName")
+                    }
                 }
             }
-            loggingService.log("Financials imported for all relevant tickers.")
+
+            loggingService.log("Financials imported!")
+            loggingService.log("Meta records: $metaRecords, financial records: $financialRecords")
+            loggingService.log("Meta records failed: $metaRecordsFailed, Meta records bad file name: $metaRecordsBadFileName, financial records failed: $financialRecordsFailed")
         }
 
-        private fun importForTicker(ticker: String) {
-            val o: JSONObject = sendRequestForTicker(ticker = ticker, function = "OVERVIEW")
-            if (o.keys.size == 0) {
-                println("$ticker not supported")
-                IgnoreTicker.save(ticker)
+        private fun createFinancialsRecordsForTicker(
+            ticker: String,
+            metaData: JSONObject,
+            financialData: JSONObject
+        ) {
+            if (!isUsGaapData(financialData = financialData)) {
                 return
             }
 
-            /** For ETFs, ETNs, and other non-stock securities these will return null on 'quarterlyReports'
-             * Although this results in an error its' not a bug or real failure because those securities don't
-             * actually have individualized financials.
-             * **/
-            //val cf: JSONArray  = sendRequestForTicker(ticker = ticker, function = "CASH_FLOW")["quarterlyReports"]        as JSONArray
-            //val ics: JSONArray = sendRequestForTicker(ticker = ticker, function = "INCOME_STATEMENT")["quarterlyReports"] as JSONArray
-            val bs: JSONArray  = sendRequestForTicker(ticker = ticker, function = "BALANCE_SHEET")["quarterlyReports"]    as JSONArray
-            if (bs.size < 2) {
-                println("Incorrect response sizes for $ticker for balance sheet: ${bs.size}")
-                IgnoreTicker.save(ticker)
-                return
-            }
-            val b: JSONObject = bs[0]  as JSONObject
+            val attr: MutableMap<FiscalGroup, MutableMap<String,Double?>> = HashMap()
 
-            val totalAssets             = Etl.doubleS(b["totalAssets"])
-            val totalCurrentAssets      = Etl.doubleS(b["totalCurrentAssets"])
-            val totalLiabilities        = Etl.doubleS(b["totalLiabilities"])
-            val totalCurrentLiabilities = Etl.doubleS(b["totalCurrentLiabilities"])
-            val bookValue               = totalAssets - totalLiabilities
-            val currentBookValue        = totalCurrentAssets - totalCurrentLiabilities
-            val cashOnHandCurrent       = Etl.doubleS(b["cashAndShortTermInvestments"])
-            var cashOnHandPrevious      = Etl.doubleS((bs[1] as JSONObject)["cashAndShortTermInvestments"])
-            val cashOnHandChange        = cashOnHandCurrent - cashOnHandPrevious
-
-            val assetCurrent = Etl.doubleS(b["totalAssets"])
-            val assetPrevious = Etl.doubleS((bs[1] as JSONObject)["totalAssets"])
-            val assetDelta = if(assetPrevious == 0.0) { 0.0 } else { (100 * (assetCurrent - assetPrevious))/assetPrevious}
-
-            val liabilityCurrent = Etl.doubleS(b["totalLiabilities"])
-            val liabilityPrevious = Etl.doubleS((bs[1] as JSONObject)["totalLiabilities"])
-            val liabilityDelta = if(liabilityPrevious == 0.0) { 0.0 } else { (100 * (liabilityCurrent - liabilityPrevious))/liabilityPrevious}
-
-            val bookValuePrevious = Etl.doubleS((bs[1] as JSONObject)["totalAssets"]) - Etl.doubleS((bs[1] as JSONObject)["totalLiabilities"])
-            val bookValueDelta = if(bookValuePrevious == 0.0) { 0.0 } else { (100*(bookValue - bookValuePrevious)) / bookValuePrevious }
-            /** TODO: Where really should this check go if anywhere? **/
-            if (bookValue == 0.0) {
-                IgnoreTicker.save(ticker)
-                return
-            }
-
-            financialsRepository.save(
-                Financials(
-                    exchange                    = o["Exchange"] as String,
-                    sector                      = o["Sector"] as String,
-                    industry                    = o["Industry"] as String,
-                    ticker                      = ticker,
-                    eps                         = Etl.doubleS(o["EPS"]),
-                    marketCapitalization        = Etl.doubleS(o["MarketCapitalization"]),
-                    sharesOutstanding           = (o["SharesOutstanding"] as String).toLong(),
-                    cashBurnPercentage          = if(cashOnHandPrevious == 0.0) { 0.0 } else {(-100.0 * cashOnHandChange) / cashOnHandPrevious },
-                    equityBurnPercentage        = (-100.0 * cashOnHandChange) / bookValue,
-                    currentEquityBurnPercentage = if(currentBookValue == 0.0) { 0.0 } else {(-100.0 * cashOnHandChange) / currentBookValue },
-                    cashOnHand                  = cashOnHandCurrent,
-                    cashOnHandChange            = cashOnHandChange,
-                    assetDelta                  = assetDelta,
-                    liabilityDelta              = liabilityDelta,
-                    bookValueDelta              = bookValueDelta,
-                    totalAssets                 = totalAssets,
-                    totalCurrentAssets          = totalCurrentAssets,
-                    totalLiabilities            = totalLiabilities,
-                    bookValue                   = bookValue,
-                    lastReportDate              = SimpleDateFormat("yyyy-MM-dd").parse(b["fiscalDateEnding"] as String)
+            val attributeArray: JSONArray = oTa(
+                "shares",
+                 oTo(
+                     "units",
+                    oTo(
+                        "EntityCommonStockSharesOutstanding",
+                        oTo(
+                            "dei",
+                            oTo(
+                                "facts", financialData
+                            )
+                        )
+                    )
                 )
-            )
+            ) ?: JSONArray()
+            for(i in attributeArray.indices) {
+                val x: JSONObject = attributeArray[i] as JSONObject
+                if ((x["form"] as String) != "10-Q") {
+                    continue
+                }
+                if((x["fy"] as Number?)?.toInt() != null && (x["fy"] as Number).toInt() < MINIMUM_YEAR) {
+                    continue
+                }
+
+                val fiscalGroup = FiscalGroup(
+                    fiscalYear   = (x["fy"] as Number?)?.toInt(),
+                    fiscalPeriod = x["fp"] as String?
+                )
+                val m: MutableMap<String, Double?> = if(attr.containsKey(fiscalGroup)) { attr[fiscalGroup]!! } else { HashMap() }
+                val value = (x["val"] as Number?)?.toDouble()
+                if(value != null) {
+                    m["EntityCommonStockSharesOutstanding"] = value
+                }
+                attr[fiscalGroup] = m
+            }
+
+            getGaapAttribute(key = "Revenues", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "RevenueFromContractWithCustomerExcludingAssessedTax", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "NetIncomeLoss", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "EarningsPerShareDiluted", usdType = "USD/shares", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "EarningsPerShareBasic", usdType = "USD/shares", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "ProfitLoss", financialData = financialData, attr = attr)
+
+            getGaapAttribute(key = "Assets", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "AssetsCurrent", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "Liabilities", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "LiabilitiesAndStockholdersEquity", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "LiabilitiesCurrent", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "StockholdersEquity", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "Cash", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "CashAndCashEquivalentsAtCarryingValue", financialData = financialData, attr = attr)
+
+            getGaapAttribute(key = "NetCashProvidedByUsedInOperatingActivities", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "NetCashProvidedByUsedInInvestingActivities", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "NetCashProvidedByUsedInFinancingActivities", financialData = financialData, attr = attr)
+            
+            for (fiscalGroup in attr.keys) {
+                val m: MutableMap<String, Double?> = attr[fiscalGroup]!!
+
+                try {
+                    financialsRepository.save(
+                        Financials(
+                            ticker                      = ticker,
+                            secSectorCode               = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
+                            cik                         = (metaData["cik"] as String).toLong(),
+
+                            netIncome                   = getNetIncome(m),
+                            revenue                     = getRevenue(m),
+                            epsBasic                    = m["EarningsPerShareBasic"],
+                            epsDiluted                  = m["EarningsPerShareDiluted"],
+                            sharesOutstanding           = m["EntityCommonStockSharesOutstanding"]?.toLong(),
+
+                            totalAssets                 = m["Assets"] ?:  m["LiabilitiesAndStockholdersEquity"],
+                            totalCurrentAssets          = m["AssetsCurrent"],
+                            totalCash                   = m["Cash"],
+                            cashAndCashEquivalents      = m["CashAndCashEquivalentsAtCarryingValue"],
+                            totalCurrentLiabilities     = m["LiabilitiesCurrent"],
+                            totalLiabilities            = m["Liabilities"] ?: if (m["StockholdersEquity"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["StockholdersEquity"]!!} else { null },
+                            totalEquity                 = m["StockholdersEquity"] ?: if (m["Liabilities"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["Liabilities"]!!} else { null },
+
+                            operatingCashFlow           = m["NetCashProvidedByUsedInOperatingActivities"],
+                            investingCashFlow           = m["NetCashProvidedByUsedInInvestingActivities"],
+                            financingCashFlow           = m["NetCashProvidedByUsedInFinancingActivities"],
+                            netChangeInCash             = if(m["NetCashProvidedByUsedInOperatingActivities"] != null && m["NetCashProvidedByUsedInInvestingActivities"] != null && m["NetCashProvidedByUsedInFinancingActivities"] != null) { m["NetCashProvidedByUsedInOperatingActivities"]!! + m["NetCashProvidedByUsedInInvestingActivities"]!! + m["NetCashProvidedByUsedInFinancingActivities"]!! } else { null },
+                            workingCapital              = if(m["AssetsCurrent"] != null && m["LiabilitiesCurrent"] != null) { m["AssetsCurrent"]!! - m["LiabilitiesCurrent"]!! } else { null },
+                            fiscalYear                  = fiscalGroup.fiscalYear,
+                            fiscalPeriod                = fiscalGroup.fiscalPeriod
+                        )
+                    )
+                } catch (e: Exception){
+                    e.printStackTrace()
+                    throw RuntimeException(e)
+                }
+            }
         }
 
-        private fun sendRequestForTicker(ticker: String, function: String) : JSONObject {
-            val url: String = "${applicationProperties.financialsApiUrl}/query?function=$function&symbol=$ticker&apikey="+
-                    "${applicationProperties.financialsApiKey}"
+        private fun getNetIncome(m: MutableMap<String, Double?> ) : Double? {
+            return m["NetIncomeLoss"] ?: m["ProfitLoss"]
+        }
 
-            return HttpUtility.getJSONObject(inputURL = url)
+        private fun getRevenue(m:MutableMap<String, Double?>) : Double? {
+            return m["Revenues"] ?: m["RevenueFromContractWithCustomerExcludingAssessedTax"]
+        }
+
+        private class FiscalGroup(
+            val fiscalYear:   Int?,
+            val fiscalPeriod: String?
+        ) {
+            override fun hashCode(): Int {
+                return ("${this.fiscalYear}-${this.fiscalPeriod}").hashCode()
+            }
+            override fun equals(other: Any?) : Boolean {
+                val x = other as FiscalGroup
+                return x.fiscalPeriod == this.fiscalPeriod &&
+                        x.fiscalYear  == this.fiscalYear
+            }
+        }
+        private fun isUsGaapData(financialData: JSONObject) : Boolean {
+            return oTo("us-gaap", oTo("facts", financialData)) != null &&
+                    oTo("ifrs-full", oTo("facts", financialData)) == null
+        }
+        private fun getGaapAttribute(
+            key: String,
+            usdType: String = "USD",
+            financialData: JSONObject,
+            attr: MutableMap<FiscalGroup, MutableMap<String,Double?>>
+        ) {
+            val attributeArray: JSONArray = oTa(
+                usdType,
+                oTo(
+                    "units",
+                    oTo(
+                        key,
+                        oTo(
+                            "us-gaap",
+                            oTo(
+                                "facts", financialData
+                            )
+                        )
+                    )
+                )
+            )?: return
+
+            for (i in attributeArray.indices) {
+                val x: JSONObject = attributeArray[i] as JSONObject
+                if ((x["form"] as String) != "10-Q") {
+                    continue
+                }
+                if((x["fy"] as Number?)?.toInt() != null && (x["fy"] as Number).toInt() < MINIMUM_YEAR) {
+                    continue
+                }
+                val fiscalGroup = FiscalGroup(
+                    fiscalYear   = (x["fy"] as Number?)?.toInt(),
+                    fiscalPeriod = x["fp"] as String?
+                )
+                val m: MutableMap<String, Double?> = if (attr[fiscalGroup] != null) {
+                    attr[fiscalGroup]!!
+                } else {
+                    HashMap()
+                }
+                val value =  (x["val"] as Number?)?.toDouble()
+                if (value != null) {
+                    m[key] = value
+                }
+                attr[fiscalGroup] = m
+            }
+        }
+
+        private fun oTo(name: String, x: JSONObject?): JSONObject? {
+            if(x == null) return null
+            return x[name] as JSONObject?
+        }
+
+        private fun oTa(name: String, x: JSONObject?): JSONArray? {
+            if(x == null) return null
+            return x[name] as JSONArray?
+        }
+
+        @Entity
+        @Table(name="sec_ignored_entity")
+        class SecIgnoredEntity {
+            @Id
+            @Column(name="id")
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private val id : Long = -1L
+
+            val cik: Long?
+            val fileName: String?
+            constructor(cik: Long?, fileName: String?) {
+                this.cik = cik
+                this.fileName = fileName
+            }
+        }
+
+        private fun isCorrectMetaFile(fileName: String) : Boolean {
+            try {
+                fileNameToCikCode(fileName = fileName)
+            } catch(ex:NumberFormatException) {
+                return false
+            }
+            return true
+        }
+
+        private fun fileNameToCikCode(fileName: String) : Long {
+            return fileName.replace("CIK","").replace(".json","").toLong()
+        }
+
+        private fun fileToJson(file: File) : JSONObject {
+            return (JSONParser().parse(file.readText()) as JSONObject)
         }
     }
 }

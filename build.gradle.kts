@@ -24,8 +24,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("jakarta.persistence:jakarta.persistence-api:3.1.0")
     //implementation("com.zaxxer:HikariCP:5.0.1")
-    runtimeOnly("mysql:mysql-connector-java:8.0.33") /* At the time of this writing I can't figure out why the version number is
-    needed here but not in some other projects. */
+    //runtimeOnly("mysql:mysql-connector-java:8.0.33")
+    implementation("mysql:mysql-connector-java:8.0.33")
     //implementation("org.hibernate:hibernate-core:5.6.14.Final") /* Is this necessary? **/
     //implementation("org.springframework:spring-orm:5.3.25")
 

@@ -16,6 +16,7 @@ class ApplicationProperties {
     val runStockSnapshotImport : Boolean
     val financialsApiUrl       : String
     val financialsApiKey       : String
+    val financialsDirectory    : String
 
     constructor(
             runIntraDayStockService: Boolean,
@@ -29,7 +30,8 @@ class ApplicationProperties {
             pollIntervalMins       : Int,
             runStockSnapshotImport : Boolean,
             financialsApiUrl       : String,
-            financialsApiKey       : String
+            financialsApiKey       : String,
+            financialsDirectory    : String
     ) {
         this.runIntraDayStockService = runIntraDayStockService
         this.polygonBaseUrl          = polygonBaseUrl
@@ -43,5 +45,6 @@ class ApplicationProperties {
         this.runStockSnapshotImport  = runStockSnapshotImport
         this.financialsApiUrl        = financialsApiUrl
         this.financialsApiKey        = financialsApiKey
+        this.financialsDirectory     = financialsDirectory
     }
 }

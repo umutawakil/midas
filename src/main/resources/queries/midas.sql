@@ -48,53 +48,69 @@ DROP TABLE IF EXISTS `financials`;
 CREATE TABLE `financials` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `ticker` varchar(45) NOT NULL,
-  `asset_delta` double NOT NULL,
-  `liability_delta` double NOT NULL,
-  `book_value_delta` double NOT NULL,
-  `eps` double NOT NULL,
-  `market_capitalization` double NOT NULL,
-  `shares_outstanding` bigint NOT NULL,
-  `cash_burn_percentage` double NOT NULL,
-  `equity_burn_percentage` double NOT NULL,
-  `current_equity_burn_percentage` double NOT NULL,
-  `cash_on_hand` double NOT NULL,
-  `cash_on_hand_change` double NOT NULL,
-  `total_assets` double NOT NULL,
-  `total_current_assets` double NOT NULL,
-  `total_liabilities` double NOT NULL,
-  `book_value` double NOT NULL,
-  `last_report_date` date NOT NULL,
-  `insertion_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `exchange` varchar(45) NOT NULL,
-  `industry` varchar(200) NOT NULL,
-  `sector` varchar(200) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `ticker_UNIQUE` (`ticker`)
-) ENGINE=InnoDB AUTO_INCREMENT=16043 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `ignore_ticker`
---
-
-DROP TABLE IF EXISTS `ignore_ticker`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ignore_ticker` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `name` varchar(45) NOT NULL,
+  `cik` bigint NOT NULL,
+  `sec_sector_code` int DEFAULT NULL,
+  `fiscal_year` int DEFAULT NULL,
+  `fiscal_period` varchar(45) DEFAULT NULL,
+  `revenue` double DEFAULT NULL,
+  `net_income` varchar(100) DEFAULT NULL,
+  `eps_basic` double DEFAULT NULL,
+  `eps_diluted` double DEFAULT NULL,
+  `shares_outstanding` bigint DEFAULT NULL,
+  `total_assets` double DEFAULT NULL,
+  `total_current_assets` double DEFAULT NULL,
+  `total_cash` double DEFAULT NULL,
+  `cash_and_cash_Equivalents` double DEFAULT NULL,
+  `total_current_liabilities` double DEFAULT NULL,
+  `total_liabilities` double DEFAULT NULL,
+  `total_equity` double DEFAULT NULL,
+  `working_capital` double DEFAULT NULL,
+  `operating_cash_flow` double DEFAULT NULL,
+  `investing_cash_flow` double DEFAULT NULL,
+  `financing_cash_flow` double DEFAULT NULL,
+  `net_change_in_cash` double DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19110 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4596102 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `milestone`
+-- Table structure for table `sec_ignored_entity`
 --
 
-DROP TABLE IF EXISTS `milestone`;
+DROP TABLE IF EXISTS `sec_ignored_entity`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `milestone` (
+CREATE TABLE `sec_ignored_entity` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `cik` bigint DEFAULT NULL,
+  `file_name` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=863430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `sic_sector`
+--
+
+DROP TABLE IF EXISTS `sic_sector`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sic_sector` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `code` int NOT NULL,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `statistics`
+--
+
+DROP TABLE IF EXISTS `statistics`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `statistics` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `ticker` varchar(45) NOT NULL,
   `max_price` double NOT NULL,
@@ -105,8 +121,10 @@ CREATE TABLE `milestone` (
   `time_window` int NOT NULL,
   `count` int NOT NULL,
   `average_volume` double NOT NULL,
+  `average_delta` double NOT NULL,
+  `average_deviation` double NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2462106 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5114429 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -124,7 +142,7 @@ CREATE TABLE `stock_snapshot` (
   `creation_date` date NOT NULL,
   `time_imported` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=59889196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=142709387 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -139,80 +157,27 @@ CREATE TABLE `ticker` (
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=95914 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120304 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Temporary view structure for view `v_financials`
+-- Temporary view structure for view `v_distinct_financials`
 --
 
-DROP TABLE IF EXISTS `v_financials`;
-/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
+DROP TABLE IF EXISTS `v_distinct_financials`;
+/*!50001 DROP VIEW IF EXISTS `v_distinct_financials`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_financials` AS SELECT 
- 1 AS `id`,
+/*!50001 CREATE VIEW `v_distinct_financials` AS SELECT 
  1 AS `ticker`,
- 1 AS `asset_delta`,
- 1 AS `liability_delta`,
- 1 AS `book_value_delta`,
- 1 AS `equity_ratio`,
- 1 AS `eps`,
- 1 AS `market_capitalization`,
- 1 AS `shares_outstanding`,
- 1 AS `cash_burn_percentage`,
- 1 AS `equity_burn_percentage`,
- 1 AS `current_equity_burn_percentage`,
- 1 AS `cash_on_hand`,
- 1 AS `cash_on_hand_change`,
- 1 AS `total_assets`,
- 1 AS `total_current_assets`,
- 1 AS `total_liabilities`,
- 1 AS `book_value`,
- 1 AS `last_report_date`,
- 1 AS `insertion_time`,
- 1 AS `exchange`,
- 1 AS `industry`,
- 1 AS `sector`*/;
+ 1 AS `sec_sector_code`*/;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `v_latest_stock_snapshot`
+-- Final view structure for view `v_distinct_financials`
 --
 
-DROP TABLE IF EXISTS `v_latest_stock_snapshot`;
-/*!50001 DROP VIEW IF EXISTS `v_latest_stock_snapshot`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_latest_stock_snapshot` AS SELECT 
- 1 AS `id`,
- 1 AS `ticker`,
- 1 AS `price`,
- 1 AS `volume`,
- 1 AS `creation_date`,
- 1 AS `time_imported`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Table structure for table `volatile_stocks`
---
-
-DROP TABLE IF EXISTS `volatile_stocks`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `volatile_stocks` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `ticker` varchar(45) NOT NULL,
-  `investment_date` date NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Final view structure for view `v_financials`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
+/*!50001 DROP VIEW IF EXISTS `v_distinct_financials`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
@@ -221,25 +186,7 @@ CREATE TABLE `volatile_stocks` (
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_financials` AS select `f`.`id` AS `id`,`f`.`ticker` AS `ticker`,`f`.`asset_delta` AS `asset_delta`,`f`.`liability_delta` AS `liability_delta`,`f`.`book_value_delta` AS `book_value_delta`,(`f`.`total_assets` / `f`.`total_liabilities`) AS `equity_ratio`,`f`.`eps` AS `eps`,`f`.`market_capitalization` AS `market_capitalization`,`f`.`shares_outstanding` AS `shares_outstanding`,`f`.`cash_burn_percentage` AS `cash_burn_percentage`,`f`.`equity_burn_percentage` AS `equity_burn_percentage`,`f`.`current_equity_burn_percentage` AS `current_equity_burn_percentage`,`f`.`cash_on_hand` AS `cash_on_hand`,`f`.`cash_on_hand_change` AS `cash_on_hand_change`,`f`.`total_assets` AS `total_assets`,`f`.`total_current_assets` AS `total_current_assets`,`f`.`total_liabilities` AS `total_liabilities`,`f`.`book_value` AS `book_value`,`f`.`last_report_date` AS `last_report_date`,`f`.`insertion_time` AS `insertion_time`,`f`.`exchange` AS `exchange`,`f`.`industry` AS `industry`,`f`.`sector` AS `sector` from `financials` `f` where ((abs(`f`.`cash_burn_percentage`) <= 1000.0) and (`f`.`market_capitalization` <> 0) and (`f`.`shares_outstanding` <> 0)) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_latest_stock_snapshot`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_latest_stock_snapshot`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_latest_stock_snapshot` AS select `s1`.`id` AS `id`,`s1`.`ticker` AS `ticker`,`s1`.`price` AS `price`,`s1`.`volume` AS `volume`,`s1`.`creation_date` AS `creation_date`,`s1`.`time_imported` AS `time_imported` from (`stock_snapshot` `s1` join (select `stock_snapshot`.`ticker` AS `ticker`,max(`stock_snapshot`.`creation_date`) AS `creation_date` from `stock_snapshot` group by `stock_snapshot`.`ticker`) `s2` on(((`s1`.`ticker` = `s2`.`ticker`) and (`s1`.`creation_date` = `s2`.`creation_date`)))) */;
+/*!50001 VIEW `v_distinct_financials` AS select distinct `financials`.`ticker` AS `ticker`,`financials`.`sec_sector_code` AS `sec_sector_code` from `financials` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -253,4 +200,4 @@ CREATE TABLE `volatile_stocks` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-11-08 12:24:30
+-- Dump completed on 2023-12-28 11:54:27

@@ -59,8 +59,8 @@ class Ticker {
         private val tickerCache: MutableMap<String, Ticker> = mutableMapOf()
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var loggingService: LoggingService
-        fun getTickers() : List<String> {
-            return this.tickerCache.values.map { it.name}
+        fun getTickers() : Set<String> {
+            return this.tickerCache.values.map { it.name}.toSet()
         }
 
         private fun importTickers() {
@@ -76,6 +76,14 @@ class Ticker {
                 tickerRepository.save(Ticker(name = t))
             }
             loggingService.log("Ticker import complete")
+        }
+        fun save(t: String) {
+           // tickerCache[t] = //TODO: This should happen but at the moment that will cause problems because we traverse the  set while updating it.
+                tickerRepository.save(Ticker(name = t))
+        }
+
+        fun delete(t: String) {
+            tickerRepository.delete(tickerCache[t]!!)
         }
     }
 

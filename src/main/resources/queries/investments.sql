@@ -1,6 +1,6 @@
 /** Show stocks that are worth investing in longer term
  **/
-SELECT * FROM midas.milestone 
+SELECT * FROM midas.statistics
 WHERE
     /*min_delta >= -25 AND*/
     min_price >= 1.0 AND
