@@ -18,27 +18,6 @@ USE `midas`;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `delta`
---
-
-DROP TABLE IF EXISTS `delta`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `delta` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `ticker` varchar(45) NOT NULL,
-  `price` double NOT NULL,
-  `open_delta` double NOT NULL,
-  `running_delta` double NOT NULL,
-  `previous_close_price` double NOT NULL,
-  `open_price` double NOT NULL,
-  `insert_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `volume` double NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2808186 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `financials`
 --
 
@@ -48,11 +27,18 @@ DROP TABLE IF EXISTS `financials`;
 CREATE TABLE `financials` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `ticker` varchar(45) NOT NULL,
+  `name` varchar(300) NOT NULL,
   `cik` bigint NOT NULL,
   `sec_sector_code` int DEFAULT NULL,
+  `otc` tinyint(1) DEFAULT NULL,
   `fiscal_year` int DEFAULT NULL,
   `fiscal_period` varchar(45) DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `quarter_number` int DEFAULT NULL,
   `revenue` double DEFAULT NULL,
+  `cost_of_revenue` double DEFAULT NULL,
+  `cost_of_goods_sold` double DEFAULT NULL,
+  `gross_profit` double DEFAULT NULL,
   `net_income` varchar(100) DEFAULT NULL,
   `eps_basic` double DEFAULT NULL,
   `eps_diluted` double DEFAULT NULL,
@@ -69,8 +55,9 @@ CREATE TABLE `financials` (
   `investing_cash_flow` double DEFAULT NULL,
   `financing_cash_flow` double DEFAULT NULL,
   `net_change_in_cash` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4596102 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`id`),
+  KEY `financials_ticker_quarter_number_idx` (`ticker`,`quarter_number`)
+) ENGINE=InnoDB AUTO_INCREMENT=4996537 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,8 +110,10 @@ CREATE TABLE `statistics` (
   `average_volume` double NOT NULL,
   `average_delta` double NOT NULL,
   `average_deviation` double NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5114429 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `current_price` double NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `statistics_ticker_time_window` (`ticker`,`time_window`)
+) ENGINE=InnoDB AUTO_INCREMENT=6124179 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -141,8 +130,10 @@ CREATE TABLE `stock_snapshot` (
   `volume` int NOT NULL,
   `creation_date` date NOT NULL,
   `time_imported` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=142709387 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`id`),
+  KEY `stock_snapshot_ticker_date_idx` (`ticker`,`creation_date`),
+  KEY `stock_snapshot_date_idx` (`creation_date`)
+) ENGINE=InnoDB AUTO_INCREMENT=176439808 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -157,27 +148,96 @@ CREATE TABLE `ticker` (
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=120304 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120382 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Temporary view structure for view `v_distinct_financials`
+-- Temporary view structure for view `v_financial_deltas`
 --
 
-DROP TABLE IF EXISTS `v_distinct_financials`;
-/*!50001 DROP VIEW IF EXISTS `v_distinct_financials`*/;
+DROP TABLE IF EXISTS `v_financial_deltas`;
+/*!50001 DROP VIEW IF EXISTS `v_financial_deltas`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_distinct_financials` AS SELECT 
+/*!50001 CREATE VIEW `v_financial_deltas` AS SELECT 
  1 AS `ticker`,
- 1 AS `sec_sector_code`*/;
+ 1 AS `fiscal_year2`,
+ 1 AS `fiscal_period2`,
+ 1 AS `fiscal_year1`,
+ 1 AS `fiscal_period1`,
+ 1 AS `range`,
+ 1 AS `revenue_delta`,
+ 1 AS `net_income_delta`,
+ 1 AS `gross_profit_delta`,
+ 1 AS `total_equity_delta`,
+ 1 AS `working_capital_delta`*/;
 SET character_set_client = @saved_cs_client;
 
 --
--- Final view structure for view `v_distinct_financials`
+-- Temporary view structure for view `v_financials`
 --
 
-/*!50001 DROP VIEW IF EXISTS `v_distinct_financials`*/;
+DROP TABLE IF EXISTS `v_financials`;
+/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `v_financials` AS SELECT 
+ 1 AS `ticker`,
+ 1 AS `fiscal_period`,
+ 1 AS `fiscal_year`,
+ 1 AS `end_date`,
+ 1 AS `quarter_number`,
+ 1 AS `otc`,
+ 1 AS `revenue`,
+ 1 AS `net_income`,
+ 1 AS `total_equity`,
+ 1 AS `working_capital`,
+ 1 AS `profit_margin`,
+ 1 AS `gross_profit`,
+ 1 AS `gross_profit_margin`,
+ 1 AS `asset_liability`,
+ 1 AS `current_asset_liability`,
+ 1 AS `cfo_working_capital`,
+ 1 AS `cost_of_goods_sold`,
+ 1 AS `market_cap`,
+ 1 AS `price_earnings`,
+ 1 AS `price_revenue`,
+ 1 AS `price_gross_profit`,
+ 1 AS `price_equity`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_stock_info`
+--
+
+DROP TABLE IF EXISTS `v_stock_info`;
+/*!50001 DROP VIEW IF EXISTS `v_stock_info`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `v_stock_info` AS SELECT 
+ 1 AS `ticker`,
+ 1 AS `current_price`,
+ 1 AS `window_delta`,
+ 1 AS `min_delta`,
+ 1 AS `max_delta`,
+ 1 AS `time_window`,
+ 1 AS `profit_margin`,
+ 1 AS `gross_profit_margin`,
+ 1 AS `price_equity`,
+ 1 AS `asset_liability`,
+ 1 AS `current_asset_liability`,
+ 1 AS `cfo_working_capital`,
+ 1 AS `sec_sector_code`,
+ 1 AS `name`,
+ 1 AS `min_price`,
+ 1 AS `max_price`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Final view structure for view `v_financial_deltas`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_financial_deltas`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
@@ -186,7 +246,43 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_distinct_financials` AS select distinct `financials`.`ticker` AS `ticker`,`financials`.`sec_sector_code` AS `sec_sector_code` from `financials` */;
+/*!50001 VIEW `v_financial_deltas` AS select `t2`.`ticker` AS `ticker`,`t2`.`fiscal_year` AS `fiscal_year2`,`t2`.`fiscal_period` AS `fiscal_period2`,`t1`.`fiscal_year` AS `fiscal_year1`,`t1`.`fiscal_period` AS `fiscal_period1`,(`t1`.`quarter_number` + `t2`.`quarter_number`) AS `range`,((100 * (`t2`.`revenue` - `t1`.`revenue`)) / abs(`t1`.`revenue`)) AS `revenue_delta`,((100 * (`t2`.`net_income` - `t1`.`net_income`)) / abs(`t1`.`net_income`)) AS `net_income_delta`,((100 * (`t2`.`gross_profit` - `t1`.`gross_profit`)) / abs(`t1`.`gross_profit`)) AS `gross_profit_delta`,((100 * (`t2`.`total_equity` - `t1`.`total_equity`)) / abs(`t1`.`total_equity`)) AS `total_equity_delta`,((100 * (`t2`.`working_capital` - `t1`.`working_capital`)) / abs(`t1`.`working_capital`)) AS `working_capital_delta` from (`v_financials` `t1` join `v_financials` `t2` on((`t1`.`ticker` = `t2`.`ticker`))) where (`t2`.`quarter_number` = 0) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_financials`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_financials`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_financials` AS select `f`.`ticker` AS `ticker`,`f`.`fiscal_period` AS `fiscal_period`,`f`.`fiscal_year` AS `fiscal_year`,`f`.`end_date` AS `end_date`,`f`.`quarter_number` AS `quarter_number`,`f`.`otc` AS `otc`,`f`.`revenue` AS `revenue`,`f`.`net_income` AS `net_income`,`f`.`total_equity` AS `total_equity`,`f`.`working_capital` AS `working_capital`,((100 * `f`.`net_income`) / `f`.`revenue`) AS `profit_margin`,`f`.`gross_profit` AS `gross_profit`,((100 * `f`.`gross_profit`) / `f`.`revenue`) AS `gross_profit_margin`,(`f`.`total_assets` / `f`.`total_liabilities`) AS `asset_liability`,(`f`.`total_current_assets` / `f`.`total_current_liabilities`) AS `current_asset_liability`,((100 * `f`.`operating_cash_flow`) / (`f`.`total_current_assets` - `f`.`total_current_liabilities`)) AS `cfo_working_capital`,`f`.`cost_of_goods_sold` AS `cost_of_goods_sold`,(`l`.`current_price` * `f`.`shares_outstanding`) AS `market_cap`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`net_income`) AS `price_earnings`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`revenue`) AS `price_revenue`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`gross_profit`) AS `price_gross_profit`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`total_equity`) AS `price_equity` from (`financials` `f` join `statistics` `l` on((`f`.`ticker` = `l`.`ticker`))) where (`l`.`time_window` = 5) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_stock_info`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_stock_info`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,`s`.`window_delta` AS `window_delta`,`s`.`min_delta` AS `min_delta`,`s`.`max_delta` AS `max_delta`,`s`.`time_window` AS `time_window`,`vf`.`profit_margin` AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,`vf`.`current_asset_liability` AS `current_asset_liability`,`vf`.`cfo_working_capital` AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` left join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) left join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -200,4 +296,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-12-28 11:54:27
+-- Dump completed on 2024-01-09  1:42:28

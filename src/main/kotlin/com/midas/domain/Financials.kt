@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.collections.HashMap
 import kotlin.io.path.name
 
@@ -26,12 +28,20 @@ class Financials {
     private val id                          : Long = -1L
     private val secSectorCode               : Int?
     private val cik                         : Long
+    private val name                        : String
+    private val otc                         : Boolean
     private val ticker                      : String
     private val fiscalYear                  : Int?
     private val fiscalPeriod                : String?
+    private val quarterNumber               : Int?
+    @Column(name="end_date")
+    private val endDate                     : Date?
 
     private val netIncome                   : Double?
     private val revenue                     : Double?
+    private val costOfRevenue               : Double?
+    private val grossProfit                 : Double?
+    private val costOfGoodsSold             : Double?
     private val epsBasic                    : Double?
     private val epsDiluted                  : Double?
     private val sharesOutstanding           : Long?
@@ -54,10 +64,17 @@ class Financials {
         ticker: String,
         fiscalYear: Int?,
         fiscalPeriod: String?,
+        endDate: Date?,
+        quarterNumber: Int?,
         secSectorCode: Int?,
         cik: Long,
+        name: String,
+        otc: Boolean,
         netIncome: Double?,
         revenue: Double?,
+        costOfRevenue: Double?,
+        grossProfit: Double?,
+        costOfGoodsSold: Double?,
         epsBasic: Double?,
         epsDiluted: Double?,
         sharesOutstanding: Long?,
@@ -76,31 +93,38 @@ class Financials {
         financingCashFlow: Double?,
         netChangeInCash: Double?
     ) {
-        this.ticker                      = ticker
-        this.secSectorCode               = secSectorCode
-        this.cik                         = cik
-        this.fiscalYear                  = fiscalYear
-        this.fiscalPeriod                = fiscalPeriod
+        this.ticker                  = ticker
+        this.secSectorCode           = secSectorCode
+        this.cik                     = cik
+        this.name                    = name
+        this.otc                     = otc
+        this.fiscalYear              = fiscalYear
+        this.fiscalPeriod            = fiscalPeriod
+        this.endDate                 = endDate
+        this.quarterNumber           = quarterNumber
 
-        this.netIncome                   = netIncome
-        this.revenue                     = revenue
-        this.epsBasic                    = epsBasic
-        this.epsDiluted                  = epsDiluted
-        this.sharesOutstanding           = sharesOutstanding
+        this.netIncome               = netIncome
+        this.revenue                 = revenue
+        this.costOfRevenue           = costOfRevenue
+        this.grossProfit             = grossProfit
+        this.costOfGoodsSold         = costOfGoodsSold
+        this.epsBasic                = epsBasic
+        this.epsDiluted              = epsDiluted
+        this.sharesOutstanding       = sharesOutstanding
 
-        this.totalAssets                 = totalAssets
-        this.totalCurrentAssets          = totalCurrentAssets
-        this.totalCash                   = totalCash
-        this.cashAndCashEquivalents      = cashAndCashEquivalents
-        this.totalCurrentLiabilities     = totalCurrentLiabilities
-        this.totalLiabilities            = totalLiabilities
-        this.totalEquity                 = totalEquity
-        this.workingCapital              = workingCapital
+        this.totalAssets             = totalAssets
+        this.totalCurrentAssets      = totalCurrentAssets
+        this.totalCash               = totalCash
+        this.cashAndCashEquivalents  = cashAndCashEquivalents
+        this.totalCurrentLiabilities = totalCurrentLiabilities
+        this.totalLiabilities        = totalLiabilities
+        this.totalEquity             = totalEquity
+        this.workingCapital          = workingCapital
 
-        this.operatingCashFlow           = operatingCashFlow
-        this.investingCashFlow           = investingCashFlow
-        this.financingCashFlow           = financingCashFlow
-        this.netChangeInCash             = netChangeInCash
+        this.operatingCashFlow       = operatingCashFlow
+        this.investingCashFlow       = investingCashFlow
+        this.financingCashFlow       = financingCashFlow
+        this.netChangeInCash         = netChangeInCash
     }
     @Component
     class SpringAdapter(
@@ -124,8 +148,10 @@ class Financials {
         private lateinit var secIgnoredEntityRepository: SecIgnoredEntityRepository
         private lateinit var loggingService: LoggingService
 
-        private const val MINIMUM_YEAR = 2023
+        private const val MINIMUM_YEAR = 2021
+        private const val MAX_NUM_QUARTERS = 4
 
+       // private var endDate: Date? = null
         fun import() {
             loggingService.log("Importing financials...")
             //financialsRepository.deleteEvery() //Using the built-in deleteAll method is slow because it looks like it does a select All first...
@@ -145,11 +171,11 @@ class Financials {
             var financialRecords       = 0
             var financialRecordsFailed = 0
 
-            for(s in Files.list(Paths.get("${applicationProperties.financialsDirectory}/submissions")).toList()) {
+            for (s in Files.list(Paths.get("${applicationProperties.financialsDirectory}/submissions")).toList()) {
                 val fileName = s.fileName.name//"CIK0001867066.json"//
                 if ((!ignoreEntityMapByName.contains(fileName)) && isCorrectMetaFile(fileName)) {
                     val cik = fileNameToCikCode(fileName = fileName)
-                    if(!ignoreEntityMap.contains(cik)) {
+                    if (!ignoreEntityMap.contains(cik)) {
                         val metaData: JSONObject = fileToJson(file = s.toFile())//fileToJson(file = File("${applicationProperties.financialsDirectory}/submissions/$fileName"))
                         /*if((metaData["exchanges"] as JSONArray).contains("OTC")) {
                             continue
@@ -206,6 +232,7 @@ class Financials {
             }
 
             val attr: MutableMap<FiscalGroup, MutableMap<String,Double?>> = HashMap()
+            //endDate = null
 
             val attributeArray: JSONArray = oTa(
                 "shares",
@@ -222,7 +249,7 @@ class Financials {
                     )
                 )
             ) ?: JSONArray()
-            for(i in attributeArray.indices) {
+            for (i in attributeArray.indices) { //TODO: Need a new algorithm that terminates when MAX_NUMBER_QUARTERS is reached per property
                 val x: JSONObject = attributeArray[i] as JSONObject
                 if ((x["form"] as String) != "10-Q") {
                     continue
@@ -233,22 +260,32 @@ class Financials {
 
                 val fiscalGroup = FiscalGroup(
                     fiscalYear   = (x["fy"] as Number?)?.toInt(),
-                    fiscalPeriod = x["fp"] as String?
+                    fiscalPeriod = x["fp"] as String?,
+                    endDate      = if(x["end"] != null) {SimpleDateFormat("yyyy-MM-dd").parse((x["end"] as String)) } else { null }
                 )
+
                 val m: MutableMap<String, Double?> = if(attr.containsKey(fiscalGroup)) { attr[fiscalGroup]!! } else { HashMap() }
                 val value = (x["val"] as Number?)?.toDouble()
-                if(value != null) {
+                if (value != null) {
                     m["EntityCommonStockSharesOutstanding"] = value
                 }
                 attr[fiscalGroup] = m
             }
 
             getGaapAttribute(key = "Revenues", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "RevenueFromContractWithCustomerIncludingAssessedTax", financialData = financialData, attr = attr)
             getGaapAttribute(key = "RevenueFromContractWithCustomerExcludingAssessedTax", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "RevenuesNetOfInterestExpense", financialData = financialData, attr = attr)
+
+            getGaapAttribute(key = "CostOfRevenue", financialData = financialData, attr = attr)
+
             getGaapAttribute(key = "NetIncomeLoss", financialData = financialData, attr = attr)
             getGaapAttribute(key = "EarningsPerShareDiluted", usdType = "USD/shares", financialData = financialData, attr = attr)
             getGaapAttribute(key = "EarningsPerShareBasic", usdType = "USD/shares", financialData = financialData, attr = attr)
             getGaapAttribute(key = "ProfitLoss", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "GrossProfit", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "CostOfGoodsSold", financialData = financialData, attr = attr) //It might not actually ever appear in the JSON this way
+            getGaapAttribute(key = "CostOfGoodsAndServicesSold", financialData = financialData, attr = attr)
 
             getGaapAttribute(key = "Assets", financialData = financialData, attr = attr)
             getGaapAttribute(key = "AssetsCurrent", financialData = financialData, attr = attr)
@@ -262,43 +299,57 @@ class Financials {
             getGaapAttribute(key = "NetCashProvidedByUsedInOperatingActivities", financialData = financialData, attr = attr)
             getGaapAttribute(key = "NetCashProvidedByUsedInInvestingActivities", financialData = financialData, attr = attr)
             getGaapAttribute(key = "NetCashProvidedByUsedInFinancingActivities", financialData = financialData, attr = attr)
-            
-            for (fiscalGroup in attr.keys) {
+
+            var quarterNumber = 0
+            for (fiscalGroup in (attr.keys.sortedByDescending {"${it.fiscalYear}${it.fiscalPeriod}"}.toList())) {
                 val m: MutableMap<String, Double?> = attr[fiscalGroup]!!
+
+                //TODO: How to ensure the last quarter is actually the real last quarter and not missing data?
 
                 try {
                     financialsRepository.save(
                         Financials(
-                            ticker                      = ticker,
-                            secSectorCode               = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
-                            cik                         = (metaData["cik"] as String).toLong(),
+                            ticker                  = ticker,
+                            secSectorCode           = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
+                            name                    = (metaData["name"] as String),
+                            cik                     = (metaData["cik"] as String).toLong(),
+                            otc                     = (metaData["exchanges"] as JSONArray).contains("OTC"),
+                            fiscalYear              = fiscalGroup.fiscalYear,
+                            fiscalPeriod            = fiscalGroup.fiscalPeriod,
+                            endDate                 = fiscalGroup.endDate,
+                            quarterNumber           = quarterNumber,
 
-                            netIncome                   = getNetIncome(m),
-                            revenue                     = getRevenue(m),
-                            epsBasic                    = m["EarningsPerShareBasic"],
-                            epsDiluted                  = m["EarningsPerShareDiluted"],
-                            sharesOutstanding           = m["EntityCommonStockSharesOutstanding"]?.toLong(),
+                            netIncome               = getNetIncome(m),
+                            revenue                 = getRevenue(m),
+                            costOfRevenue           = m["CostOfRevenue"],
+                            grossProfit             = getGrossProfit(m),
+                            costOfGoodsSold         = getCostOfGoodsSold(m),
+                            epsBasic                = m["EarningsPerShareBasic"],
+                            epsDiluted              = m["EarningsPerShareDiluted"],
+                            sharesOutstanding       = m["EntityCommonStockSharesOutstanding"]?.toLong(),
 
-                            totalAssets                 = m["Assets"] ?:  m["LiabilitiesAndStockholdersEquity"],
-                            totalCurrentAssets          = m["AssetsCurrent"],
-                            totalCash                   = m["Cash"],
-                            cashAndCashEquivalents      = m["CashAndCashEquivalentsAtCarryingValue"],
-                            totalCurrentLiabilities     = m["LiabilitiesCurrent"],
-                            totalLiabilities            = m["Liabilities"] ?: if (m["StockholdersEquity"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["StockholdersEquity"]!!} else { null },
-                            totalEquity                 = m["StockholdersEquity"] ?: if (m["Liabilities"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["Liabilities"]!!} else { null },
+                            totalAssets             = m["Assets"] ?:  m["LiabilitiesAndStockholdersEquity"],
+                            totalCurrentAssets      = m["AssetsCurrent"],
+                            totalCash               = m["Cash"],
+                            cashAndCashEquivalents  = m["CashAndCashEquivalentsAtCarryingValue"],
+                            totalCurrentLiabilities = m["LiabilitiesCurrent"],
+                            totalLiabilities        = m["Liabilities"] ?: if (m["StockholdersEquity"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["StockholdersEquity"]!!} else { null },
+                            totalEquity             = m["StockholdersEquity"] ?: if (m["Liabilities"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["Liabilities"]!!} else { null },
 
-                            operatingCashFlow           = m["NetCashProvidedByUsedInOperatingActivities"],
-                            investingCashFlow           = m["NetCashProvidedByUsedInInvestingActivities"],
-                            financingCashFlow           = m["NetCashProvidedByUsedInFinancingActivities"],
-                            netChangeInCash             = if(m["NetCashProvidedByUsedInOperatingActivities"] != null && m["NetCashProvidedByUsedInInvestingActivities"] != null && m["NetCashProvidedByUsedInFinancingActivities"] != null) { m["NetCashProvidedByUsedInOperatingActivities"]!! + m["NetCashProvidedByUsedInInvestingActivities"]!! + m["NetCashProvidedByUsedInFinancingActivities"]!! } else { null },
-                            workingCapital              = if(m["AssetsCurrent"] != null && m["LiabilitiesCurrent"] != null) { m["AssetsCurrent"]!! - m["LiabilitiesCurrent"]!! } else { null },
-                            fiscalYear                  = fiscalGroup.fiscalYear,
-                            fiscalPeriod                = fiscalGroup.fiscalPeriod
+                            operatingCashFlow       = m["NetCashProvidedByUsedInOperatingActivities"],
+                            investingCashFlow       = m["NetCashProvidedByUsedInInvestingActivities"],
+                            financingCashFlow       = m["NetCashProvidedByUsedInFinancingActivities"],
+                            netChangeInCash         = if(m["NetCashProvidedByUsedInOperatingActivities"] != null && m["NetCashProvidedByUsedInInvestingActivities"] != null && m["NetCashProvidedByUsedInFinancingActivities"] != null) { m["NetCashProvidedByUsedInOperatingActivities"]!! + m["NetCashProvidedByUsedInInvestingActivities"]!! + m["NetCashProvidedByUsedInFinancingActivities"]!! } else { null },
+                            workingCapital          = if(m["AssetsCurrent"] != null && m["LiabilitiesCurrent"] != null) { m["AssetsCurrent"]!! - m["LiabilitiesCurrent"]!! } else { null }
                         )
                     )
                 } catch (e: Exception){
                     e.printStackTrace()
                     throw RuntimeException(e)
+                }
+                quarterNumber++
+                if (quarterNumber == (MAX_NUM_QUARTERS + 1)) { //TODO: A more efficient algorithm that makes it so we only have MAX_NUM_QUARTERS per property will save time.
+                    break
                 }
             }
         }
@@ -308,12 +359,41 @@ class Financials {
         }
 
         private fun getRevenue(m:MutableMap<String, Double?>) : Double? {
-            return m["Revenues"] ?: m["RevenueFromContractWithCustomerExcludingAssessedTax"]
+            return  m["Revenues"] ?:
+                    m["RevenuesNetOfInterestExpense"] ?:
+                    m["RevenueFromContractWithCustomerIncludingAssessedTax"] ?:
+                    m["RevenueFromContractWithCustomerExcludingAssessedTax"]
+
+            /*if(getGrossProfit(m)!= null && getCostOfGoodsSold(m) != null) {
+                getGrossProfit(m)!! + getCostOfGoodsSold(m)!!
+            } else {
+                m["RevenuesNetOfInterestExpense"] ?:
+                m["RevenueFromContractWithCustomerIncludingAssessedTax"] ?:
+                m["RevenueFromContractWithCustomerExcludingAssessedTax"]
+            }*/
+        }
+
+
+        /** TODO: Do to the inconsistency in reporting this number is only used differentially. **/
+        private fun getGrossProfit(m:MutableMap<String, Double?>) : Double? {
+            if(m["GrossProfit"] != null) return m["GrossProfit"]!!
+
+            val costOfGoodsSold: Double = getCostOfGoodsSold(m) ?: return null
+            val revenue: Double = getRevenue(m) ?: return null
+            return revenue - costOfGoodsSold
+        }
+
+        /** Do to the inconsistency in reporting this number is only used differentially but in some cases
+         * to calculate Revenue for the stocks that have not reported it for some reason.
+         * . **/
+        private fun getCostOfGoodsSold(m:MutableMap<String, Double?>) : Double? {
+            return m["CostOfGoodsSold"] ?:  m["CostOfGoodsAndServicesSold"] ?: m["CostOfRevenue"]
         }
 
         private class FiscalGroup(
             val fiscalYear:   Int?,
-            val fiscalPeriod: String?
+            val fiscalPeriod: String?,
+            val endDate: Date?
         ) {
             override fun hashCode(): Int {
                 return ("${this.fiscalYear}-${this.fiscalPeriod}").hashCode()
@@ -350,7 +430,7 @@ class Financials {
                 )
             )?: return
 
-            for (i in attributeArray.indices) {
+            for (i in attributeArray.indices) {//TODO: Need a new algorithm that terminates when MAX_NUMBER_QUARTERS is reached per property
                 val x: JSONObject = attributeArray[i] as JSONObject
                 if ((x["form"] as String) != "10-Q") {
                     continue
@@ -358,10 +438,13 @@ class Financials {
                 if((x["fy"] as Number?)?.toInt() != null && (x["fy"] as Number).toInt() < MINIMUM_YEAR) {
                     continue
                 }
+
                 val fiscalGroup = FiscalGroup(
                     fiscalYear   = (x["fy"] as Number?)?.toInt(),
-                    fiscalPeriod = x["fp"] as String?
+                    fiscalPeriod = x["fp"] as String?,
+                    endDate      = if(x["end"] != null) {SimpleDateFormat("yyyy-MM-dd").parse((x["end"] as String)) } else { null }
                 )
+
                 val m: MutableMap<String, Double?> = if (attr[fiscalGroup] != null) {
                     attr[fiscalGroup]!!
                 } else {

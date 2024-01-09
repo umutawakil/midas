@@ -48,6 +48,11 @@ class StockSnapshot {
             StockSnapshot.stockSnapshotRepository = stockSnapshotRepository
             StockSnapshot.loggingService          = loggingService
             tickerSpringAdapter.init()
+
+            /*queue = LinkedBlockingQueue()
+            executorService = ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
+                queue
+            )*/
         }
     }
 
@@ -55,14 +60,18 @@ class StockSnapshot {
         private lateinit var applicationProperties: ApplicationProperties
         private lateinit var stockSnapshotRepository: StockSnapshotRepository
         private lateinit var loggingService: LoggingService
-        private val          executorService: ExecutorService = ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue()
+        private val queue: BlockingQueue<Runnable> = LinkedBlockingQueue()
+        private val executor: ThreadPoolExecutor = ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
+            queue
         )
-        private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
-        val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
-        private val activeTickers: MutableSet<String> = HashSet()
+        private val executorService: ExecutorService = executor
 
-        fun findByDescending(ticker: String) : List<StockSnapshot> {
+        private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
+        private val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
+        private val activeTickers: MutableSet<String> = HashSet()
+        private var startTime = 0L
+
+        private fun findByDescending(ticker: String) : List<StockSnapshot> {
             if(snapshotMap.isEmpty()) {
                 buildTickerSnapshotMap()
             }
@@ -90,6 +99,7 @@ class StockSnapshot {
         }
 
         private fun populateSnapshots(days: Int) {
+            startTime = System.currentTimeMillis()
             var tempDate = getCurrentDateString()
             loggingService.log("Initial date: $tempDate")
 
@@ -99,18 +109,18 @@ class StockSnapshot {
             }
         }
 
-        fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
+        private fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
             return ((x2.price - x1.price)/ x1.price)*100.0
         }
 
-        fun max(currentPrice: Double, s: StockSnapshot) : Double {
+        private fun max(currentPrice: Double, s: StockSnapshot) : Double {
             if(currentPrice> s.price) {
                 return currentPrice
             }
             return s.price
         }
 
-        fun min(currentPrice: Double, s: StockSnapshot) : Double {
+        private fun min(currentPrice: Double, s: StockSnapshot) : Double {
             if(currentPrice < s.price) {
                 return currentPrice
             }
@@ -118,7 +128,7 @@ class StockSnapshot {
         }
 
         fun calculateStatistics() {
-            buildTickerSnapshotMap() //TODO: This populates the tickersnapshot map but also activeTickers. Needs to be broken up
+            buildTickerSnapshotMap() //TODO: This populates the ticker snapshot map but also activeTickers. Needs to be broken up
             var c                           = 0
             var newTickers                  = 0
             var staleTickers                = 0
@@ -193,6 +203,7 @@ class StockSnapshot {
                             ticker           = t,
                             minPrice         = minPrice,
                             maxPrice         = maxPrice,
+                            currentPrice     = snapshots[0].price,
                             maxDelta         = maxDelta,
                             minDelta         = minDelta,
                             averageDelta     = averageDelta,
@@ -218,6 +229,11 @@ class StockSnapshot {
                     importSnapShotsWorker(dateString = dateString)
                 } catch (e: Exception) {
                     loggingService.error(e)
+                }
+                loggingService.log("Queue Size: ${queue.size}")
+                if(queue.size == 0 && executor.activeCount == 1) {
+                    loggingService.log("All threads completed")
+                    executorService.shutdown()
                 }
             }
         }

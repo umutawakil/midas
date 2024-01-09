@@ -15,7 +15,6 @@ class MidasRunner {
     class SpringAdapter(
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val loggingService: LoggingService,
-        @Autowired private val deltaSpringAdapter: Delta.SpringAdapter,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
         @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
         @Autowired private val statisticsSpringAdapter: Statistics.SpringAdapter,
@@ -42,13 +41,8 @@ class MidasRunner {
             StockSnapshot.populatePastOneYearSnapshots()*/
 
             /** Statistics calculation job **/
-            /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.calculateStatistics()*/
-
-            /** Continuous stock snapshots Job **/
-            /*deltaSpringAdapter.init()
-            Companion.loggingService.log("Midas starting downloads. Lets get that MONEY!!!!!")
-            Delta.continuouslyCalculateRealtimeDeltas()*/
+            stockSnapshotSpringAdapter.init()
+            StockSnapshot.calculateStatistics()
         }
     }
 

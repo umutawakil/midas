@@ -16,6 +16,7 @@ class Statistics {
     private val ticker          : String
     private val maxDelta        : Double
     private val minDelta        : Double
+    private val currentPrice    : Double
     private val maxPrice        : Double
     private val minPrice        : Double
     private val averageVolume   : Double
@@ -29,6 +30,7 @@ class Statistics {
             minPrice        : Double,
             maxPrice        : Double,
             maxDelta        : Double,
+            currentPrice    : Double,
             minDelta        : Double,
             averageVolume   : Double,
             averageDelta    : Double,
@@ -40,6 +42,7 @@ class Statistics {
         this.ticker           = ticker
         this.minPrice         = minPrice
         this.maxPrice         = maxPrice
+        this.currentPrice     = currentPrice
         this.maxDelta         = maxDelta
         this.minDelta         = minDelta
         this.averageDelta     = averageDelta
