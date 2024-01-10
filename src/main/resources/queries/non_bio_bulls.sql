@@ -16,7 +16,7 @@ WHERE (
     f.sec_sector_code != 384) AND*/
     f.otc = 0 AND
     f.quarter_number = 0 AND
-    f.net_income > 0 AND /*
+    f.net_income < 0 AND /*
     f.fiscal_year = 2023 AND
     f.fiscal_period = "Q3" AND*/
     

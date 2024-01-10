@@ -197,6 +197,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `gross_profit_margin`,
  1 AS `asset_liability`,
  1 AS `current_asset_liability`,
+ 1 AS `debt_percentage`,
  1 AS `cfo_working_capital`,
  1 AS `cost_of_goods_sold`,
  1 AS `market_cap`,
@@ -225,7 +226,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `gross_profit_margin`,
  1 AS `price_equity`,
  1 AS `asset_liability`,
- 1 AS `current_asset_liability`,
+ 1 AS `debt_percentage`,
  1 AS `cfo_working_capital`,
  1 AS `sec_sector_code`,
  1 AS `name`,
@@ -264,7 +265,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_financials` AS select `f`.`ticker` AS `ticker`,`f`.`fiscal_period` AS `fiscal_period`,`f`.`fiscal_year` AS `fiscal_year`,`f`.`end_date` AS `end_date`,`f`.`quarter_number` AS `quarter_number`,`f`.`otc` AS `otc`,`f`.`revenue` AS `revenue`,`f`.`net_income` AS `net_income`,`f`.`total_equity` AS `total_equity`,`f`.`working_capital` AS `working_capital`,((100 * `f`.`net_income`) / `f`.`revenue`) AS `profit_margin`,`f`.`gross_profit` AS `gross_profit`,((100 * `f`.`gross_profit`) / `f`.`revenue`) AS `gross_profit_margin`,(`f`.`total_assets` / `f`.`total_liabilities`) AS `asset_liability`,(`f`.`total_current_assets` / `f`.`total_current_liabilities`) AS `current_asset_liability`,((100 * `f`.`operating_cash_flow`) / (`f`.`total_current_assets` - `f`.`total_current_liabilities`)) AS `cfo_working_capital`,`f`.`cost_of_goods_sold` AS `cost_of_goods_sold`,(`l`.`current_price` * `f`.`shares_outstanding`) AS `market_cap`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`net_income`) AS `price_earnings`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`revenue`) AS `price_revenue`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`gross_profit`) AS `price_gross_profit`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`total_equity`) AS `price_equity` from (`financials` `f` join `statistics` `l` on((`f`.`ticker` = `l`.`ticker`))) where (`l`.`time_window` = 5) */;
+/*!50001 VIEW `v_financials` AS select `f`.`ticker` AS `ticker`,`f`.`fiscal_period` AS `fiscal_period`,`f`.`fiscal_year` AS `fiscal_year`,`f`.`end_date` AS `end_date`,`f`.`quarter_number` AS `quarter_number`,`f`.`otc` AS `otc`,`f`.`revenue` AS `revenue`,`f`.`net_income` AS `net_income`,`f`.`total_equity` AS `total_equity`,`f`.`working_capital` AS `working_capital`,((100 * `f`.`net_income`) / `f`.`revenue`) AS `profit_margin`,`f`.`gross_profit` AS `gross_profit`,((100 * `f`.`gross_profit`) / `f`.`revenue`) AS `gross_profit_margin`,(`f`.`total_assets` / `f`.`total_liabilities`) AS `asset_liability`,(`f`.`total_current_assets` / `f`.`total_current_liabilities`) AS `current_asset_liability`,((100 * `f`.`total_current_liabilities`) / (abs(`f`.`total_current_assets`) + abs(`f`.`total_current_liabilities`))) AS `debt_percentage`,round(((100 * `f`.`operating_cash_flow`) / (`f`.`total_current_assets` - `f`.`total_current_liabilities`)),2) AS `cfo_working_capital`,`f`.`cost_of_goods_sold` AS `cost_of_goods_sold`,(`l`.`current_price` * `f`.`shares_outstanding`) AS `market_cap`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`net_income`) AS `price_earnings`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`revenue`) AS `price_revenue`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`gross_profit`) AS `price_gross_profit`,((`l`.`current_price` * `f`.`shares_outstanding`) / `f`.`total_equity`) AS `price_equity` from (`financials` `f` join `statistics` `l` on((`f`.`ticker` = `l`.`ticker`))) where (`l`.`time_window` = 5) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -282,7 +283,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,`s`.`window_delta` AS `window_delta`,`s`.`min_delta` AS `min_delta`,`s`.`max_delta` AS `max_delta`,`s`.`time_window` AS `time_window`,`vf`.`profit_margin` AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,`vf`.`current_asset_liability` AS `current_asset_liability`,`vf`.`cfo_working_capital` AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` left join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) left join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0) and (`f`.`sec_sector_code` <> '283') and (`f`.`otc` = '0') and (not((`f`.`sec_sector_code` like '38%'))) and (not((`f`.`sec_sector_code` like '80%'))))) */;
+/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,round(`s`.`window_delta`,2) AS `window_delta`,round(`s`.`min_delta`,2) AS `min_delta`,round(`s`.`max_delta`,2) AS `max_delta`,`s`.`time_window` AS `time_window`,round(`vf`.`profit_margin`,2) AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,round(`vf`.`debt_percentage`,2) AS `debt_percentage`,round(`vf`.`cfo_working_capital`,2) AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` left join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) left join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0) and (`f`.`sec_sector_code` <> '283') and (`f`.`otc` = '0') and (not((`f`.`sec_sector_code` like '38%'))) and (not((`f`.`sec_sector_code` like '80%'))))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -296,4 +297,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-01-10  8:57:08
+-- Dump completed on 2024-01-10 13:31:02
