@@ -282,7 +282,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,`s`.`window_delta` AS `window_delta`,`s`.`min_delta` AS `min_delta`,`s`.`max_delta` AS `max_delta`,`s`.`time_window` AS `time_window`,`vf`.`profit_margin` AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,`vf`.`current_asset_liability` AS `current_asset_liability`,`vf`.`cfo_working_capital` AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` left join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) left join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0))) */;
+/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,`s`.`window_delta` AS `window_delta`,`s`.`min_delta` AS `min_delta`,`s`.`max_delta` AS `max_delta`,`s`.`time_window` AS `time_window`,`vf`.`profit_margin` AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,`vf`.`current_asset_liability` AS `current_asset_liability`,`vf`.`cfo_working_capital` AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` left join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) left join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0) and (`f`.`sec_sector_code` <> '283') and (`f`.`otc` = '0') and (not((`f`.`sec_sector_code` like '38%'))) and (not((`f`.`sec_sector_code` like '80%'))))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -296,4 +296,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-01-09  1:42:28
+-- Dump completed on 2024-01-10  8:57:08
