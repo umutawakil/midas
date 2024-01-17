@@ -195,25 +195,29 @@ class StockSnapshot {
                     averageDeviation /= w
 
                     var windowDelta = 0.0
+                    //TODO: Need to find more about these stocks with very little data below (w)
+                    //TODO: THis edge case needs unit tests.
                     if(snapshots.size >= w) {
                         windowDelta = delta(x2 = snapshots[0], x1 = snapshots[w - 1])
-                    }
-                    Statistics.save(
-                        Statistics(
-                            ticker           = t,
-                            minPrice         = minPrice,
-                            maxPrice         = maxPrice,
-                            currentPrice     = snapshots[0].price,
-                            maxDelta         = maxDelta,
-                            minDelta         = minDelta,
-                            averageDelta     = averageDelta,
-                            averageDeviation = averageDeviation,
-                            averageVolume    = averageVolume,
-                            windowDelta      = windowDelta,
-                            timeWindow       = w,
-                            count            = snapshots.size
+
+                        Statistics.save(
+                            Statistics(
+                                ticker           = t,
+                                minPrice         = minPrice,
+                                maxPrice         = maxPrice,
+                                currentPrice     = snapshots[0].price,
+                                maxDelta         = maxDelta,
+                                minDelta         = minDelta,
+                                averageDelta     = averageDelta,
+                                averageDeviation = averageDeviation,
+                                averageVolume    = averageVolume,
+                                windowDelta      = windowDelta,
+                                timeWindow       = w,
+                                count            = snapshots.size
+                            )
                         )
-                    )
+                    }
+
                 }
             }
             loggingService.log("New tickers: $newTickers")

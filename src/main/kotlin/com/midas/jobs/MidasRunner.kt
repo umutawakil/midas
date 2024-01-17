@@ -37,12 +37,12 @@ class MidasRunner {
             Financials.import()*/
 
             /** Historical StockSnapshot JOb--------------------**/
-            /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.populatePastOneYearSnapshots()*/
+            //stockSnapshotSpringAdapter.init()
+            //StockSnapshot.populatePastOneYearSnapshots()
 
             /** Statistics calculation job **/
-            stockSnapshotSpringAdapter.init()
-            StockSnapshot.calculateStatistics()
+            /*stockSnapshotSpringAdapter.init()
+            StockSnapshot.calculateStatistics()*/
         }
     }
 

@@ -227,7 +227,8 @@ class Financials {
             metaData: JSONObject,
             financialData: JSONObject
         ) {
-            if (!isUsGaapData(financialData = financialData)) {
+            if (!hasUsGaapData(financialData = financialData)) {
+                UnsupportedTicker.save(UnsupportedTicker(name = ticker))
                 return
             }
 
@@ -280,9 +281,11 @@ class Financials {
             getGaapAttribute(key = "CostOfRevenue", financialData = financialData, attr = attr)
 
             getGaapAttribute(key = "NetIncomeLoss", financialData = financialData, attr = attr)
+            getGaapAttribute(key = "ProfitLoss", financialData = financialData, attr = attr)
+
             getGaapAttribute(key = "EarningsPerShareDiluted", usdType = "USD/shares", financialData = financialData, attr = attr)
             getGaapAttribute(key = "EarningsPerShareBasic", usdType = "USD/shares", financialData = financialData, attr = attr)
-            getGaapAttribute(key = "ProfitLoss", financialData = financialData, attr = attr)
+
             getGaapAttribute(key = "GrossProfit", financialData = financialData, attr = attr)
             getGaapAttribute(key = "CostOfGoodsSold", financialData = financialData, attr = attr) //It might not actually ever appear in the JSON this way
             getGaapAttribute(key = "CostOfGoodsAndServicesSold", financialData = financialData, attr = attr)
@@ -334,7 +337,7 @@ class Financials {
                             cashAndCashEquivalents  = m["CashAndCashEquivalentsAtCarryingValue"],
                             totalCurrentLiabilities = m["LiabilitiesCurrent"],
                             totalLiabilities        = m["Liabilities"] ?: if (m["StockholdersEquity"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["StockholdersEquity"]!!} else { null },
-                            totalEquity             = m["StockholdersEquity"] ?: if (m["Liabilities"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["Liabilities"]!!} else { null },
+                            totalEquity             = getTotalEquity(m),//m["StockholdersEquity"] ?: if (m["Liabilities"] != null && m["LiabilitiesAndStockholdersEquity"] != null) { m["LiabilitiesAndStockholdersEquity"]!! - m["Liabilities"]!!} else { null },
 
                             operatingCashFlow       = m["NetCashProvidedByUsedInOperatingActivities"],
                             investingCashFlow       = m["NetCashProvidedByUsedInInvestingActivities"],
@@ -373,6 +376,13 @@ class Financials {
             }*/
         }
 
+        private fun getTotalEquity(m:MutableMap<String, Double?>) : Double? {
+            if(m["Assets"] != null && m["Liabilities"] != null) {
+                return m["Assets"]!! - m["Liabilities"]!!
+            }
+            return null
+        }
+
 
         /** TODO: Do to the inconsistency in reporting this number is only used differentially. **/
         private fun getGrossProfit(m:MutableMap<String, Double?>) : Double? {
@@ -404,7 +414,7 @@ class Financials {
                         x.fiscalYear  == this.fiscalYear
             }
         }
-        private fun isUsGaapData(financialData: JSONObject) : Boolean {
+        private fun hasUsGaapData(financialData: JSONObject) : Boolean {
             return oTo("us-gaap", oTo("facts", financialData)) != null &&
                     oTo("ifrs-full", oTo("facts", financialData)) == null
         }
