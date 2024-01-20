@@ -1,4 +1,4 @@
-SELECT * FROM midas.statistics WHERE ticker = "DERM";
+SELECT * FROM midas.statistics WHERE ticker = "INLX";
 
 /*SELECT AVG(average_deviation) FROM midas.statistics WHERE time_window = 20;*/ /* 3.385 */
 
