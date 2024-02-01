@@ -30,6 +30,7 @@ CREATE TABLE `financials` (
   `name` varchar(300) NOT NULL,
   `cik` bigint NOT NULL,
   `sec_sector_code` int DEFAULT NULL,
+  `sic_code` varchar(45) NOT NULL,
   `otc` tinyint(1) DEFAULT NULL,
   `fiscal_year` int DEFAULT NULL,
   `fiscal_period` varchar(45) DEFAULT NULL,
@@ -57,7 +58,7 @@ CREATE TABLE `financials` (
   `net_change_in_cash` double DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `financials_ticker_quarter_number_idx` (`ticker`,`quarter_number`)
-) ENGINE=InnoDB AUTO_INCREMENT=5071739 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5146931 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,6 +74,21 @@ CREATE TABLE `sec_ignored_entity` (
   `file_name` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=863430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `sic_level_3`
+--
+
+DROP TABLE IF EXISTS `sic_level_3`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sic_level_3` (
+  `code` varchar(200) NOT NULL,
+  `office` varchar(200) NOT NULL,
+  `industry` varchar(300) NOT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -108,12 +124,13 @@ CREATE TABLE `statistics` (
   `time_window` int NOT NULL,
   `count` int NOT NULL,
   `average_volume` double NOT NULL,
+  `volume_delta` double NOT NULL,
   `average_delta` double NOT NULL,
   `average_deviation` double NOT NULL,
   `current_price` double NOT NULL,
   PRIMARY KEY (`id`),
   KEY `statistics_ticker_time_window` (`ticker`,`time_window`)
-) ENGINE=InnoDB AUTO_INCREMENT=6564538 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7800446 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -133,7 +150,7 @@ CREATE TABLE `stock_snapshot` (
   PRIMARY KEY (`id`),
   KEY `stock_snapshot_ticker_date_idx` (`ticker`,`creation_date`),
   KEY `stock_snapshot_date_idx` (`creation_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=192896716 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=212573868 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -167,7 +184,7 @@ CREATE TABLE `ticker` (
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=120480 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120602 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -264,7 +281,8 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `otc`,
  1 AS `name`,
  1 AS `min_price`,
- 1 AS `max_price`*/;
+ 1 AS `max_price`,
+ 1 AS `volume_delta`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -316,7 +334,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`midas`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,round(`s`.`window_delta`,2) AS `window_delta`,round(`s`.`min_delta`,2) AS `min_delta`,round(`s`.`max_delta`,2) AS `max_delta`,`s`.`time_window` AS `time_window`,round(`vf`.`profit_margin`,2) AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,round(`vf`.`debt_percentage`,2) AS `debt_percentage`,round(`vf`.`cfo_working_capital`,2) AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`otc` AS `otc`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price` from ((`statistics` `s` join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0))) */;
+/*!50001 VIEW `v_stock_info` AS select `s`.`ticker` AS `ticker`,`s`.`current_price` AS `current_price`,round(`s`.`window_delta`,2) AS `window_delta`,round(`s`.`min_delta`,2) AS `min_delta`,round(`s`.`max_delta`,2) AS `max_delta`,`s`.`time_window` AS `time_window`,round(`vf`.`profit_margin`,2) AS `profit_margin`,`vf`.`gross_profit_margin` AS `gross_profit_margin`,`vf`.`price_equity` AS `price_equity`,`vf`.`asset_liability` AS `asset_liability`,round(`vf`.`debt_percentage`,2) AS `debt_percentage`,round(`vf`.`cfo_working_capital`,2) AS `cfo_working_capital`,`f`.`sec_sector_code` AS `sec_sector_code`,`f`.`otc` AS `otc`,`f`.`name` AS `name`,`s`.`min_price` AS `min_price`,`s`.`max_price` AS `max_price`,round(`s`.`volume_delta`,2) AS `volume_delta` from ((`statistics` `s` join `financials` `f` on((`s`.`ticker` = `f`.`ticker`))) join `v_financials` `vf` on((`s`.`ticker` = `vf`.`ticker`))) where ((`f`.`ticker` is null) or ((`f`.`quarter_number` = 0) and (`vf`.`quarter_number` = 0))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -330,4 +348,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-01-19 22:11:41
+-- Dump completed on 2024-02-01 16:21:22

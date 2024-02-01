@@ -27,6 +27,7 @@ class Financials {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private val id                          : Long = -1L
     private val secSectorCode               : Int?
+    private val sicCode                     : String?
     private val cik                         : Long
     private val name                        : String
     private val otc                         : Boolean
@@ -67,6 +68,7 @@ class Financials {
         endDate: Date?,
         quarterNumber: Int?,
         secSectorCode: Int?,
+        sicCode: String?,
         cik: Long,
         name: String,
         otc: Boolean,
@@ -96,6 +98,7 @@ class Financials {
         this.ticker                  = ticker
         this.secSectorCode           = secSectorCode
         this.cik                     = cik
+        this.sicCode                 = sicCode
         this.name                    = name
         this.otc                     = otc
         this.fiscalYear              = fiscalYear
@@ -314,6 +317,7 @@ class Financials {
                         Financials(
                             ticker                  = ticker,
                             secSectorCode           = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
+                            sicCode                 = metaData["sic"]?.toString(),
                             name                    = (metaData["name"] as String),
                             cik                     = (metaData["cik"] as String).toLong(),
                             otc                     = (metaData["exchanges"] as JSONArray).contains("OTC"),

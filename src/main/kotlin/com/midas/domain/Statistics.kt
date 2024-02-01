@@ -20,11 +20,12 @@ class Statistics {
     private val maxPrice        : Double
     private val minPrice        : Double
     private val averageVolume   : Double
+    private val volumeDelta     : Double
     private val averageDelta    : Double
     private val averageDeviation: Double
     private val windowDelta     : Double
     private val timeWindow      : Int
-    private val count           : Int /** TOOD: Polygon API has some tickers that have very few records but it might not be polygons fault**/
+    private val count           : Int /** TODO: Polygon API has some tickers that have very few records but it might not be polygons fault**/
     constructor(
             ticker          : String,
             minPrice        : Double,
@@ -33,6 +34,7 @@ class Statistics {
             currentPrice    : Double,
             minDelta        : Double,
             averageVolume   : Double,
+            volumeDelta     : Double,
             averageDelta    : Double,
             averageDeviation: Double,
             windowDelta     : Double,
@@ -48,6 +50,7 @@ class Statistics {
         this.averageDelta     = averageDelta
         this.averageDeviation = averageDeviation
         this.averageVolume    = averageVolume
+        this.volumeDelta      = volumeDelta
         this.windowDelta      = windowDelta
         this.timeWindow       = timeWindow
         this.count            = count

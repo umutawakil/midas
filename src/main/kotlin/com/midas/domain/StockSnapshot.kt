@@ -25,7 +25,7 @@ class StockSnapshot {
     private val id           : Long = -1L
     private val ticker       : String
     private val price        : Double
-    private var volume       : Int
+    private val volume       : Int
     private val creationDate : Date
 
     constructor(ticker: String, price: Double, volume: Int, creationDate: Date) {
@@ -48,11 +48,6 @@ class StockSnapshot {
             StockSnapshot.stockSnapshotRepository = stockSnapshotRepository
             StockSnapshot.loggingService          = loggingService
             tickerSpringAdapter.init()
-
-            /*queue = LinkedBlockingQueue()
-            executorService = ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
-                queue
-            )*/
         }
     }
 
@@ -67,7 +62,7 @@ class StockSnapshot {
         private val executorService: ExecutorService = executor
 
         private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
-        private val WINDOWS: List<Int> = listOf(5, 10, 20, 40, 60)
+        private val WINDOWS: List<Int> = listOf(3, 5, 10, 20, 40, 60)
         private val activeTickers: MutableSet<String> = HashSet()
         private var startTime = 0L
 
@@ -109,8 +104,16 @@ class StockSnapshot {
             }
         }
 
+        //TODO: These accessors below are from a migration when the Statistics class handled this logic and such things were "hidden" from this class. They could be removed but perhaps its cleaner this way?...
         private fun delta(x2: StockSnapshot, x1: StockSnapshot) : Double {
             return ((x2.price - x1.price)/ x1.price)*100.0
+        }
+
+        private fun calculateVolumeDelta(x2: StockSnapshot, x1: StockSnapshot) : Double {
+            if(x1.volume == 0) {
+                return 0.0
+            }
+            return ((x2.volume.toDouble() - x1.volume.toDouble())/ x1.volume.toDouble())*100.0
         }
 
         private fun max(currentPrice: Double, s: StockSnapshot) : Double {
@@ -155,8 +158,9 @@ class StockSnapshot {
             }
             loggingService.log("Stale tickers removed: $staleTickers")
 
-            for (t: String in tickers) { loggingService.log("Ticker: $c")
-                c++
+            for (t: String in tickers) {
+                //loggingService.log("Ticker: $c")
+                //c++
                 val snapshots: List<StockSnapshot> = findByDescending(ticker = t)
                 for (w in WINDOWS) {
                     var maxDelta         = 0.0
@@ -167,7 +171,7 @@ class StockSnapshot {
                     var averageDelta     = 0.0
                     var averageDeviation = 0.0
 
-                    for (i in 1 until w) {
+                    for (i in 1 until (w + 1)) {
                         if (i >= snapshots.size) {break}
                         val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
                         averageDelta += currentDelta
@@ -185,20 +189,23 @@ class StockSnapshot {
                     averageVolume /= w
                     averageDelta  /= w
 
-                    for (i in 1 until w) {
+                    for (i in 1 until (w + 1)) {
                         if (i >= snapshots.size) {break}
                         val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
                         //if(averageDelta != 0.0) {
                             averageDeviation += abs(averageDelta - currentDelta)//(100 * abs(averageDelta - currentDelta)) / averageDelta
                         //}
+
                     }
                     averageDeviation /= w
 
                     var windowDelta = 0.0
+                    var volumeDelta = 0.0
                     //TODO: Need to find more about these stocks with very little data below (w)
                     //TODO: THis edge case needs unit tests.
-                    if(snapshots.size >= w) {
+                    if (snapshots.size >= w) {
                         windowDelta = delta(x2 = snapshots[0], x1 = snapshots[w - 1])
+                        volumeDelta = calculateVolumeDelta(x2 = snapshots[0], x1 = snapshots[w - 1])
 
                         Statistics.save(
                             Statistics(
@@ -211,6 +218,7 @@ class StockSnapshot {
                                 averageDelta     = averageDelta,
                                 averageDeviation = averageDeviation,
                                 averageVolume    = averageVolume,
+                                volumeDelta      = volumeDelta,
                                 windowDelta      = windowDelta,
                                 timeWindow       = w,
                                 count            = snapshots.size
