@@ -7,17 +7,22 @@ phases:
 
   pre_build:
     commands:
-      - echo "Checking java version..."
+      - yum remove java-11-amazon-corretto
       - java -version
       - echo "$JAVA_HOME"
+
       - echo "Installing java 17 corretto..."
-      - yum install -y java-17-amazon-corretto-headless
+      - yum install -y java-17-amazon-corretto
       - java -version
+      - echo "$JAVA_HOME"
+
+      #- export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
       - echo "Building application...."
       - ./gradlew build
+
       - echo "Moving binary for execution..."
       - mv build/libs/midas-1.0-SNAPSHOT.jar app.jar
-      - aws s3 cp app.jar s3://$DEPLOYMENT_BUCKET
+      - aws s3 cp app.jar s3://${DEPLOYMENT_BUCKET}
       - aws s3 cp src/main/resources/app.conf s3://${DEPLOYMENT_BUCKET}/app.conf
       - aws s3 cp src/main/resources/app.service s3://${DEPLOYMENT_BUCKET}/app.service
 
