@@ -22,7 +22,7 @@ phases:
   build:
     commands:
       - echo "creating stack to run job..."
-      - aws cloudformation create-stack --stack-name ${JOB_NAME}-${ENVIRONMENT} --template-body file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/stack.json --parameters ParameterKey=JobName,ParameterValue=$JOB_NAME ParameterKey=Environment,ParameterValue=$Environment ParameterKey=DeploymentBucket,ParameterValue=$DEPLOYMENT_BUCKET ParameterKey=NotificationEmail,ParameterValue=$Notification_Email ParameterKey=ChangeId,ParameterValue=$CODEBUILD_SOURCE_VERSION --capabilities CAPABILITY_NAMED_IAM
+      - aws cloudformation create-stack --stack-name ${JOB_NAME}-${ENVIRONMENT} --template-body file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/stack.json --parameters ParameterKey=JobName,ParameterValue=$JOB_NAME ParameterKey=Environment,ParameterValue=$ENVIRONMENT ParameterKey=DeploymentBucket,ParameterValue=$DEPLOYMENT_BUCKET ParameterKey=NotificationEmail,ParameterValue=$Notification_Email ParameterKey=ChangeId,ParameterValue=$CODEBUILD_SOURCE_VERSION --capabilities CAPABILITY_NAMED_IAM
 
   post_build:
     commands:
