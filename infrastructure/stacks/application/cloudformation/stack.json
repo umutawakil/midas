@@ -105,7 +105,7 @@
         "InstanceType": {"Ref": "InstanceType"},
         "KeyName" : {"Ref": "SSHKeyName"},
         "IamInstanceProfile" : {"Ref": "InstanceProfile"},
-        "SecurityGroupIds": [{"Fn::ImportValue":{"Fn::Join" : ["", ["application-security-group-id", {"Ref": "Environment"}]]}}],
+        "SecurityGroupIds": [{"Fn::ImportValue":{"Fn::Join" : ["", ["application-security-group-", {"Ref": "Environment"}]]}}],
         "SubnetId": {"Fn::Select": [0,{"Fn::Split": [",",{"Fn::ImportValue":{"Fn::Join" : ["", ["ec2-subnet-ids-", {"Ref": "Environment"}]]}}]}]},
         "AvailabilityZone": {"Fn::ImportValue":{"Fn::Join" : ["", ["availability-zone-", {"Ref": "Environment"}]]}},
         "UserData": {
@@ -124,11 +124,6 @@
 
             "#Download the deployment artifacts\n",
             "aws s3 cp s3://",{"Ref": "DeploymentBucket"}," ./ --recursive\n",
-            "echo \"copy has been executed!!!\"",
-            "#Setup log rotation\n",
-            "mv app.conf /etc/logrotate.d\n",
-            "logrotate /etc/logrotate.d/app.conf\n",
-            "echo \"Log rotation configured!!!\"",
 
             "#install app as a service just in case the server goes down before its noticed\n",
             "mv app.service app\n",

@@ -5,7 +5,7 @@
   },
   {
     "ParameterKey": "DeploymentBucket",
-    "ParameterValue": "midas-deployment-prod"
+    "ParameterValue": "prod-midas-stock-snapshots-importer-deployment"
   },
   {
     "ParameterKey": "InstanceType",

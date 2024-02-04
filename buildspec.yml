@@ -11,15 +11,13 @@ phases:
       - ./gradlew build
       - echo "Moving binary for execution..."
       - mv build/libs/midas-1.0-SNAPSHOT.jar app.jar
-      - echo "Retrieving core credentials..."
-      - aws s3 cp s3://$JOB_BUCKET ./ --recursive
-      - chmod -x run-app.sh
+      - aws s3 cp app.jar s3://$DEPLOYMENT_BUCKET
 
   build:
     commands:
-      - echo "Running importer...."
-      - sh run-app.sh
+      - echo "creating stack to run job..."
+      - aws cloudformation create-stack --stack-name ${JOB_NAME}-${ENVIRONMENT} --template-body file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/stack.json --parameters file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/environments/${ENVIRONMENT}.json --capabilities CAPABILITY_NAMED_IAM
 
   post_build:
     commands:
-      - echo Build completed on `date`
+      - echo Deployment completed on `date`
