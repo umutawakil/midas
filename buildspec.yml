@@ -9,14 +9,14 @@ phases:
     commands:
       - echo "Installing java..."
       - yum install -y java-17-amazon-corretto-headless
-      - echo java -version
+      - java -version
       - echo "Building application...."
       - ./gradlew build
       - echo "Moving binary for execution..."
       - mv build/libs/midas-1.0-SNAPSHOT.jar app.jar
       - aws s3 cp app.jar s3://$DEPLOYMENT_BUCKET
       - aws s3 cp src/main/resources/app.conf s3://${DEPLOYMENT_BUCKET}/app.conf
-      - aws s3 cp src/main/resources/app.conf s3://${DEPLOYMENT_BUCKET}/app.service
+      - aws s3 cp src/main/resources/app.service s3://${DEPLOYMENT_BUCKET}/app.service
 
   build:
     commands:
