@@ -12,11 +12,13 @@ phases:
       - echo "Moving binary for execution..."
       - mv build/libs/midas-1.0-SNAPSHOT.jar app.jar
       - aws s3 cp app.jar s3://$DEPLOYMENT_BUCKET
+      - aws s3 cp src/main/resources/app.conf s3://${DEPLOYMENT_BUCKET}/app.conf
+      - aws s3 cp src/main/resources/app.conf s3://${DEPLOYMENT_BUCKET}/app.service
 
   build:
     commands:
       - echo "creating stack to run job..."
-      - aws cloudformation create-stack --stack-name ${JOB_NAME}-${ENVIRONMENT} --template-body file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/stack.json --parameters file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/environments/${ENVIRONMENT}.json --capabilities CAPABILITY_NAMED_IAM
+      - aws cloudformation create-stack --stack-name ${JOB_NAME}-${ENVIRONMENT} --template-body file://${CODEBUILD_SRC_DIR}/infrastructure/stacks/application/cloudformation/stack.json --parameters ParameterKey=Environment,ParameterValue=$Environment,ParameterKey=DeploymentBucket,ParameterValue=$DEPLOYMENT_BUCKET,ParameterKey=NotificationEmail,ParameterValue=$Notification_Email,ParameterKey=ChangeId,ParameterValue=$CODEBUILD_SOURCE_VERSION --capabilities CAPABILITY_NAMED_IAM
 
   post_build:
     commands:

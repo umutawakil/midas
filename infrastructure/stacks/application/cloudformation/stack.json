@@ -9,14 +9,17 @@
     },
     "InstanceType": {
       "Description": "The type of EC2 Instance",
-      "Type": "String"
+      "Type": "String",
+      "Default": "t3.medium"
     },
     "AMI": {
       "Type": "String",
+      "Default": "ami-00e5bfb57321d7f4f",
       "Description": "THis is the amazon Machine Image used as the base template to build this stack from."
     },
     "NumberOfEC2Instances": {
-      "Type": "String"
+      "Type": "String",
+      "Default": "1"
     },
     "SSHKeyName": {
       "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
@@ -24,7 +27,8 @@
       "MinLength": "1",
       "MaxLength": "255",
       "AllowedPattern": "[\\x20-\\x7E]*",
-      "ConstraintDescription": "can contain only ASCII characters."
+      "ConstraintDescription": "can contain only ASCII characters.",
+      "Default": "dev-key"
     },
     "NotificationEmail": {
       "Type": "String",
