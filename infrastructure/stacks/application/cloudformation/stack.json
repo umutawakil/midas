@@ -1,6 +1,9 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
+    "JobName" : {
+      "Type": "String"
+    },
     "Environment": {
       "Type": "String"
     },
