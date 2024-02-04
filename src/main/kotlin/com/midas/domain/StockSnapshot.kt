@@ -40,7 +40,8 @@ class StockSnapshot {
         @Autowired val applicationProperties      : ApplicationProperties,
         @Autowired val stockSnapshotRepository    : StockSnapshotRepository,
         @Autowired val loggingService             : LoggingService,
-        @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter
+        @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
+        @Autowired private val statisticsSpringAdapter: Statistics.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
@@ -48,6 +49,7 @@ class StockSnapshot {
             StockSnapshot.stockSnapshotRepository = stockSnapshotRepository
             StockSnapshot.loggingService          = loggingService
             tickerSpringAdapter.init()
+            statisticsSpringAdapter.init()
         }
     }
 
