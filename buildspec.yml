@@ -7,7 +7,9 @@ phases:
 
   pre_build:
     commands:
-      - echo "Installing java..."
+      - echo "Checking java version..."
+      - java -version
+      - echo "Installing java 17 corretto..."
       - yum install -y java-17-amazon-corretto-headless
       - java -version
       - echo "Building application...."
