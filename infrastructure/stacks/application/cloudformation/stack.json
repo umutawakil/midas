@@ -17,7 +17,7 @@
     },
     "AMI": {
       "Type": "String",
-      "Default": "ami-00e5bfb57321d7f4f",
+      "Default": "ami-0bb5bdcde45e9ca22",
       "Description": "THis is the amazon Machine Image used as the base template to build this stack from."
     },
     "NumberOfEC2Instances": {
@@ -122,12 +122,6 @@
             "#Echo the changeId just so that changes to the changeId can drive an update on the autoscaling group\n",
             "cd /\n",
             "echo changeID: \"",{"Ref": "ChangeId"},"\"\n",
-
-            "#Wait for the EC2s networking to be ready. Not sure why this doesn't happen automatically if your not using an ELB\n",
-            "#sleep 120\n",
-
-            "#Install some artifacts\n",
-            "yum install -y java-17-amazon-corretto-headless\n",
 
             "#Download the deployment artifacts\n",
             "aws s3 cp s3://",{"Ref": "DeploymentBucket"}," ./ --recursive\n",
