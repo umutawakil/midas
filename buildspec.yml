@@ -8,6 +8,7 @@ phases:
   pre_build:
     commands:
       - yum install -y java-17-amazon-corretto
+      - echo $JAVA_HOME
       - export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
       - echo "Building application...."
       - ./gradlew build
