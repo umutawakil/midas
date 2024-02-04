@@ -1,12 +1,14 @@
 version: 0.2
 
 phases:
-  install:
-    runtime-versions:
-      java: corretto11
+  #install:
+ #   runtime-versions:
+ #     java: corretto11
 
   pre_build:
     commands:
+      - echo "Installing java..."
+      - yum install -y java-17-amazon-corretto-headless
       - echo "Building application...."
       - ./gradlew build
       - echo "Moving binary for execution..."
