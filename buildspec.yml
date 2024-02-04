@@ -9,6 +9,7 @@ phases:
     commands:
       - echo "Installing java..."
       - yum install -y java-17-amazon-corretto-headless
+      - echo java -version
       - echo "Building application...."
       - ./gradlew build
       - echo "Moving binary for execution..."
