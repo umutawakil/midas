@@ -67,38 +67,36 @@ class StockSnapshot {
         private var startTime = 0L
 
         private fun findByDescending(ticker: String) : List<StockSnapshot> {
-            if(snapshotMap.isEmpty()) {
+            initSnapshotMapIfEmpty()
+            return snapshotMap[ticker]!!
+        }
+        fun initSnapshotMapIfEmpty() {
+            if (snapshotMap.isEmpty()) {
+                println("Mapping snapshots to tickers..for first time before caching...")
                 buildTickerSnapshotMap()
             }
-            return snapshotMap[ticker] ?: emptyList()
         }
         private fun buildTickerSnapshotMap() {
-            println("Mapping snapshots to tickers.....")
+            println("buildTickerSnapshotMap - Mapping snapshots to tickers.....")
             val results: List<StockSnapshot> = stockSnapshotRepository.findAll().toList()
             for(r in results) {
                 snapshotMap.computeIfAbsent(r.ticker.uppercase()) { mutableListOf()}.add(r)
                 activeTickers.add(r.ticker.uppercase())
             }
-            for(k in snapshotMap.keys) {
+            for (k in snapshotMap.keys) {
                 snapshotMap[k] = snapshotMap[k]!!.sortedByDescending { it.creationDate }.toMutableList()
             }
-            println("Tickers loaded....")
         }
 
         fun populatePastOneYearSnapshots() {
-            populateSnapshots(days = 365)
-        }
+            loggingService.log("Importing one years worth of stock snapshots...")
 
-        fun populatePastOneMonthSnapshots() {
-            populateSnapshots(days = 30)
-        }
-
-        private fun populateSnapshots(days: Int) {
-            startTime = System.currentTimeMillis()
+            val days     = 365
+            startTime    = System.currentTimeMillis()
             var tempDate = getCurrentDateString()
-            loggingService.log("Initial date: $tempDate")
 
-            for(i in 0 until days) {
+            loggingService.log("Initial date: $tempDate")
+            for (i in 0 until days) {
                 importSnapShots(tempDate)
                 tempDate = decrementDateString(input = tempDate)
             }
@@ -110,37 +108,40 @@ class StockSnapshot {
         }
 
         private fun calculateVolumeDelta(x2: StockSnapshot, x1: StockSnapshot) : Double {
-            if(x1.volume == 0) {
+            if (x1.volume == 0) {
                 return 0.0
             }
             return ((x2.volume.toDouble() - x1.volume.toDouble())/ x1.volume.toDouble())*100.0
         }
 
         private fun max(currentPrice: Double, s: StockSnapshot) : Double {
-            if(currentPrice> s.price) {
+            if (currentPrice> s.price) {
                 return currentPrice
             }
             return s.price
         }
 
         private fun min(currentPrice: Double, s: StockSnapshot) : Double {
-            if(currentPrice < s.price) {
+            if (currentPrice < s.price) {
                 return currentPrice
             }
             return s.price
         }
 
         fun calculateStatistics() {
-            buildTickerSnapshotMap() //TODO: This populates the ticker snapshot map but also activeTickers. Needs to be broken up
+            loggingService.log("Calculating statistics...")
+            initSnapshotMapIfEmpty() //TODO: This populates the ticker snapshot map but also activeTickers. Needs to be broken up
             var c                           = 0
             var newTickers                  = 0
             var staleTickers                = 0
             val tickers: MutableSet<String> = HashSet(Ticker.getTickers())
             val oldNumTickers               = tickers.size
             val activeTickersSize           = activeTickers.size
+            loggingService.log("Active tickers: $activeTickersSize")
             loggingService.log("Adding new tickers...")
             for (t0 in activeTickers) {
                 if (!tickers.contains(t0)) {
+                    loggingService.log("New ticker: $t0")
                     Ticker.save(t0)
                     tickers.add(t0)
                     newTickers++
@@ -156,11 +157,11 @@ class StockSnapshot {
                     staleTickers++
                 }
             }
-            loggingService.log("Stale tickers removed: $staleTickers")
+            loggingService.log("Stale tickers just removed: $staleTickers")
 
             for (t: String in tickers) {
-                //loggingService.log("Ticker: $c")
-                //c++
+                loggingService.log("Ticker: $c")
+                c++
                 val snapshots: List<StockSnapshot> = findByDescending(ticker = t)
                 for (w in WINDOWS) {
                     var maxDelta         = 0.0
@@ -199,8 +200,8 @@ class StockSnapshot {
                     }
                     averageDeviation /= w
 
-                    var windowDelta = 0.0
-                    var volumeDelta = 0.0
+                    var windowDelta: Double
+                    var volumeDelta: Double
                     //TODO: Need to find more about these stocks with very little data below (w)
                     //TODO: THis edge case needs unit tests.
                     if (snapshots.size >= w) {
@@ -244,7 +245,7 @@ class StockSnapshot {
                 }
                 loggingService.log("Queue Size: ${queue.size}")
                 if(queue.size == 0 && executor.activeCount == 1) {
-                    loggingService.log("All threads completed")
+                    loggingService.log("All snapshot importer threads completed")
                     executorService.shutdown()
                 }
             }

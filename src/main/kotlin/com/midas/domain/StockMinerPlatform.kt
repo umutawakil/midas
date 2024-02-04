@@ -28,7 +28,7 @@ class StockMinerPlatform {
             StockMinerPlatform.applicationProperties = applicationProperties
             StockMinerPlatform.loggingService        = loggingService
 
-            loggingService.log("IntraDayStockRecord initialized")
+            loggingService.log("StockMinerPlatform initialized")
         }
     }
 
@@ -103,7 +103,7 @@ class StockMinerPlatform {
                         val ticker = (jsonResult[i] as JSONObject)["ticker"] as String
                         val previousDayClose = Etl.double((prevDayObject as JSONObject)["c"])
                         val openPrice        = Etl.double((dayObject as JSONObject)["o"])
-                        val dayVolume        = Etl.double((dayObject as JSONObject)["v"])
+                        val dayVolume        = Etl.double(dayObject["v"])
                         val todaysChange     = Etl.double(todaysChangeObject)
                         //val todaysChangePerc = Etl.double(todaysChangePercObject)
 

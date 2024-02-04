@@ -16,8 +16,6 @@ class MidasRunner {
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val loggingService: LoggingService,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
-        @Autowired private val tickerSpringAdapter: Ticker.SpringAdapter,
-        @Autowired private val statisticsSpringAdapter: Statistics.SpringAdapter,
         @Autowired private val financialsSpringAdapter: Financials.SpringAdapter
     ) {
         @PostConstruct
@@ -29,20 +27,30 @@ class MidasRunner {
                 return
             }
 
-            /** Ticker job---------------------------------------- **/
-            //tickerSpringAdapter.init()
+            /** TODO: There are various ways to do this without hardcoding the class. Can identify the class from a bean id etc **/
+            val jobName = System.getenv("jobName")
 
-            /** Financials Job ------------------------------------**/
-            /*financialsSpringAdapter.init()
-            Financials.import()*/
+            /** Financials Job ----------------------------------------------------**/
+            if (jobName == "import-financials") {
+                financialsSpringAdapter.init()
+                Financials.import()
+                return
+            }
 
-            /** Historical StockSnapshot JOb--------------------**/
-            /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.populatePastOneYearSnapshots()*/
+            /** Stock snapshot import job -----------------------------------------**/
+            if (jobName == "import-snapshots") {
+                stockSnapshotSpringAdapter.init()
+                StockSnapshot.populatePastOneYearSnapshots()
+                return
+            }
 
-            /** Statistics calculation job **/
-            /*stockSnapshotSpringAdapter.init()
-            StockSnapshot.calculateStatistics()*/
+            /** Calculate stock statistics job -------------------------------------**/
+            if (jobName == "calculate-statistics") {
+                stockSnapshotSpringAdapter.init()
+                StockSnapshot.calculateStatistics()
+                return
+            }
+            throw RuntimeException("Job not found by name $jobName")
         }
     }
 

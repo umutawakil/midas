@@ -64,7 +64,6 @@ class Statistics {
         fun init() {
             Statistics.statisticsRepository = statisticsRepository
         }
-
     }
     companion object {
         private lateinit var statisticsRepository: StatisticsRepository

@@ -9,10 +9,10 @@ SELECT
 FROM 
 	midas.statistics m
 WHERE 
-    m.min_price >= 10 AND
+    m.min_price >= 2 AND
     m.max_delta <=10 AND
     m.min_delta >= -10 AND
     m.time_window = 20 
 ORDER BY 
 	m.window_delta
-DESC LIMIT 100;
+DESC LIMIT 500;

@@ -130,7 +130,7 @@ CREATE TABLE `statistics` (
   `current_price` double NOT NULL,
   PRIMARY KEY (`id`),
   KEY `statistics_ticker_time_window` (`ticker`,`time_window`)
-) ENGINE=InnoDB AUTO_INCREMENT=7800446 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8554381 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -150,26 +150,7 @@ CREATE TABLE `stock_snapshot` (
   PRIMARY KEY (`id`),
   KEY `stock_snapshot_ticker_date_idx` (`ticker`,`creation_date`),
   KEY `stock_snapshot_date_idx` (`creation_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=212573868 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `subscriber`
---
-
-DROP TABLE IF EXISTS `subscriber`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `subscriber` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `email_address` varchar(300) NOT NULL,
-  `confirmed` tinyint(1) NOT NULL,
-  `time_zone_offset` varchar(45) NOT NULL,
-  `confirmation_token` varchar(300) NOT NULL,
-  `creation_timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `last_update_timestamp` varchar(45) DEFAULT 'ON UPDATE CURRENT_TIMESTAMP()',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=226919912 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -184,7 +165,7 @@ CREATE TABLE `ticker` (
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=120602 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=199034 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -348,4 +329,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-02-01 16:21:22
+-- Dump completed on 2024-02-03 20:44:36
