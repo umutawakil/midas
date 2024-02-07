@@ -5,14 +5,15 @@ import jakarta.annotation.PostConstruct
 import jakarta.persistence.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.io.Serializable
 
 @Entity
 @Table(name="unsupported_ticker")
 class UnsupportedTicker(
     @Id
     @Column(name="ticker")
-    private val name: String
-) {
+    val name: String
+) : Serializable {
     @Component
     private class SpringAdapter(
         @Autowired

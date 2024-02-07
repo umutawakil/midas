@@ -162,7 +162,7 @@ class StockSnapshot {
             loggingService.log("Stale tickers just removed: $staleTickers")
 
             for (t: String in tickers) {
-                loggingService.log("Ticker: $c")
+                loggingService.log("Ticker: $t, num: $c")
                 c++
                 val snapshots: List<StockSnapshot> = findByDescending(ticker = t)
                 for (w in WINDOWS) {

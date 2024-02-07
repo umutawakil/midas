@@ -14,6 +14,9 @@ class ApplicationProperties {
     val isNotIntegrationTest   : Boolean
     val pollIntervalMins       : Int
     val financialsDirectory    : String
+    val awsSecretKey           : String
+    val awsAccessKey           : String
+    val deploymentBucket       : String
 
     constructor(
             runIntraDayStockService: Boolean,
@@ -25,7 +28,10 @@ class ApplicationProperties {
             errorDirectory         : String,
             isNotIntegrationTest   : Boolean,
             pollIntervalMins       : Int,
-            financialsDirectory    : String
+            financialsDirectory    : String,
+            awsSecretKey           : String,
+            awsAccessKey           : String,
+            deploymentBucket       : String
     ) {
         this.runIntraDayStockService = runIntraDayStockService
         this.polygonBaseUrl          = polygonBaseUrl
@@ -37,5 +43,8 @@ class ApplicationProperties {
         this.isNotIntegrationTest    = isNotIntegrationTest
         this.pollIntervalMins        = pollIntervalMins
         this.financialsDirectory     = financialsDirectory
+        this.awsSecretKey            = awsSecretKey
+        this.awsAccessKey            = awsAccessKey
+        this.deploymentBucket        = deploymentBucket
     }
 }

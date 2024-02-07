@@ -38,6 +38,8 @@ dependencies {
     }
     implementation("org.jetbrains.kotlin:kotlin-reflect")
    // implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("com.amazonaws:aws-java-sdk-s3:1.12.652")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
 }
 
 tasks.test {

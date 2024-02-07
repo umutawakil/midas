@@ -16,7 +16,8 @@ class MidasRunner {
         @Autowired private val applicationProperties: ApplicationProperties,
         @Autowired private val loggingService: LoggingService,
         @Autowired private val stockSnapshotSpringAdapter: StockSnapshot.SpringAdapter,
-        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter
+        @Autowired private val financialsSpringAdapter: Financials.SpringAdapter,
+        @Autowired private val stockInfoSpringAdapter: StockInfo.SpringAdapter
     ) {
         @PostConstruct
         fun init() {
@@ -28,7 +29,7 @@ class MidasRunner {
             }
 
             /** TODO: There are various ways to do this without hardcoding the class. Can identify the class from a bean id etc **/
-            val jobName = System.getenv("JOB_NAME")
+            val jobName = "export-stock-info"//"calculate-statistics"//"import-snapshots"//System.getenv("JOB_NAME")
 
             /** Financials Job ----------------------------------------------------**/
             if (jobName == "import-financials") {
@@ -48,6 +49,12 @@ class MidasRunner {
             if (jobName == "calculate-statistics") {
                 stockSnapshotSpringAdapter.init()
                 StockSnapshot.calculateStatistics()
+                return
+            }
+
+            if(jobName == "export-stock-info") {
+                stockInfoSpringAdapter.init()
+                StockInfo.exportToCloud()
                 return
             }
             throw RuntimeException("Job not found by name $jobName")
