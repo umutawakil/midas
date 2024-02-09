@@ -84,6 +84,7 @@ class Ticker {
 
         fun delete(t: String) {
             tickerRepository.delete(tickerCache[t]!!)
+            tickerCache.remove(t) //TODO: Why was this missing?
         }
     }
 

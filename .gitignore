@@ -4,6 +4,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+stock-info.json
+unsupported-tickers.json
+
 ### IntelliJ IDEA ###
 .idea/*
 .idea
