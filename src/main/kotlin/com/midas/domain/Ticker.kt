@@ -79,7 +79,7 @@ class Ticker {
         }
         fun save(t: String) {
            // tickerCache[t] = //TODO: This should happen but at the moment that will cause problems because we traverse the  set while updating it.
-                tickerRepository.save(Ticker(name = t))
+                tickerRepository.save(Ticker(name = t.uppercase()))
         }
 
         fun delete(t: String) {

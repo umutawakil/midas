@@ -70,7 +70,12 @@ class StockSnapshot {
 
         private fun findByDescending(ticker: String) : List<StockSnapshot> {
             initSnapshotMapIfEmpty()
-            return snapshotMap[ticker]!!
+            val potentialSnapshots = snapshotMap[ticker]
+            if(potentialSnapshots == null || (potentialSnapshots!!.size == 0)) {
+                //TODO: What causes some records from tickers table/repo to have no snapshots? I currently can only think of stale tickers
+                loggingService.log("$ticker has no snapshot data for the supplied ticker")
+            }
+            return (potentialSnapshots ?: emptyList())
         }
         fun initSnapshotMapIfEmpty() {
             if (snapshotMap.isEmpty()) {

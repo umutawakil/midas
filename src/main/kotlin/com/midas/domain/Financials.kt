@@ -157,8 +157,9 @@ class Financials {
        // private var endDate: Date? = null
         fun import() {
             loggingService.log("Importing financials...")
-            //financialsRepository.deleteEvery() //Using the built-in deleteAll method is slow because it looks like it does a select All first...
-            loggingService.log("Previous records deleted....")
+            //TODO: financialsRepository.deleteEvery() //Using the built-in deleteAll method is slow because it looks like it does a select All first...
+           //TODO: Needs to delete UnsupportedTicker as well
+           loggingService.log("Previous records deleted....")
 
             /*TODO: These two can be consolidated into one perhaps but it will require re running multiple times and
             * without memoization this runs very slow. To save time two structures are utilized
@@ -179,16 +180,17 @@ class Financials {
                 if ((!ignoreEntityMapByName.contains(fileName)) && isCorrectMetaFile(fileName)) {
                     val cik = fileNameToCikCode(fileName = fileName)
                     if (!ignoreEntityMap.contains(cik)) {
-                        val metaData: JSONObject = fileToJson(file = s.toFile())//fileToJson(file = File("${applicationProperties.financialsDirectory}/submissions/$fileName"))
+                        val metaData: JSONObject? = fileToJson(file = s.toFile())//fileToJson(file = File("${applicationProperties.financialsDirectory}/submissions/$fileName"))
                         /*if((metaData["exchanges"] as JSONArray).contains("OTC")) {
                             continue
                         }*/
-                        if ((metaData["tickers"] as JSONArray).size > 0) {
+                        if (metaData != null && ((metaData["tickers"] as JSONArray).size > 0)) {
                             metaRecords++
                             loggingService.log("Meta records: $metaRecords, Meta file pre-processed: $fileName")
 
                             for (t in metaData["tickers"] as JSONArray) {
                                 val financialFile = File("${applicationProperties.financialsDirectory}/companyfacts/$fileName")
+                                loggingService.log("Processing file ${financialFile.name} for ticker: $t")
                                 if (financialFile.exists()) {
                                     createFinancialsRecordsForTicker(
                                         ticker        = t as String,
@@ -204,6 +206,7 @@ class Financials {
                                 }
                             }
                         } else {
+                            loggingService.log("Failed import of file $fileName")
                             metaRecordsFailed++
                             /* TODO: This save makes the application skip non-ticker entity files for every or until the ignore database is cleared and re-run **/
                             secIgnoredEntityRepository.save(SecIgnoredEntity(cik = cik, fileName = fileName))
@@ -228,9 +231,9 @@ class Financials {
         private fun createFinancialsRecordsForTicker(
             ticker: String,
             metaData: JSONObject,
-            financialData: JSONObject
+            financialData: JSONObject?
         ) {
-            if (!hasUsGaapData(financialData = financialData)) {
+            if (financialData == null || !hasUsGaapData(financialData = financialData)) {
                 UnsupportedTicker.save(UnsupportedTicker(name = ticker))
                 return
             }
@@ -511,8 +514,17 @@ class Financials {
             return fileName.replace("CIK","").replace(".json","").toLong()
         }
 
-        private fun fileToJson(file: File) : JSONObject {
-            return (JSONParser().parse(file.readText()) as JSONObject)
+        private fun fileToJson(file: File) : JSONObject? {
+            val fileText = file.readText()
+            if (fileText.isEmpty()) {
+                return null
+            }
+            try {
+                return (JSONParser().parse(file.readText()) as JSONObject)
+            } catch (e: Exception) {
+                loggingService.log("ParsingIssue on file: ${file.name}")
+                return null
+            }
         }
     }
 }

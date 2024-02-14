@@ -29,7 +29,7 @@ class MidasRunner {
             }
 
             /** TODO: There are various ways to do this without hardcoding the class. Can identify the class from a bean id etc **/
-            val jobName = "export-stock-info"//"calculate-statistics"//"import-snapshots"//System.getenv("JOB_NAME")
+            val jobName = "calculate-statistics"//"calculate-statistics"//"import-snapshots"//System.getenv("JOB_NAME")
 
             /** Financials Job ----------------------------------------------------**/
             if (jobName == "import-financials") {
