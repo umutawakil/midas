@@ -250,8 +250,8 @@ class Financials {
                     sicCode       = metaData["sic"]!!.toString(),
                     name          = (metaData["name"] as String),
                     cik           = (metaData["cik"] as String).toLong(),
-                    otc           = (metaData["exchanges"] as JSONArray).contains("OTC"),
-                    financialData = hasUsGaapData
+                    otc           = (metaData["exchanges"] as JSONArray).contains("OTC"), // TODO: Not all OTC are marked as such in their financials file.
+                    financialData = hasUsGaapData // This is misleading because some stocks have financial records but none usable in the allowed timeframe
                 )
             )
 

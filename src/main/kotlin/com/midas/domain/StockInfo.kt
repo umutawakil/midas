@@ -29,6 +29,7 @@ class StockInfo : Serializable {
     val windowDelta: Double
     val minDelta: Double
     val maxDelta: Double
+    val averageDeviation: Double
     val volumeDelta: Double
     val profitMargin: Double?
     @Column(name = "debt_percentage")
@@ -44,6 +45,7 @@ class StockInfo : Serializable {
         windowDelta: Double,
         minDelta: Double,
         maxDelta: Double,
+        averageDeviation: Double,
         volumeDelta: Double,
         profitMargin: Double?,
         debtRatio: Double?,
@@ -52,17 +54,18 @@ class StockInfo : Serializable {
         secSectorCode: Int?,
         otc: Boolean?
     ) {
-        this.name           = name
-        this.windowDelta    = windowDelta
-        this.minDelta       = minDelta
-        this.maxDelta       = maxDelta
-        this.volumeDelta    = volumeDelta
-        this.profitMargin   = profitMargin
-        this.debtPercentage = debtRatio
-        this.cashBurnRate   = cashBurnRate
-        this.id             = StockInfoId(ticker = ticker, timeWindow = timeWindow)
-        this.secSectorCode  = secSectorCode
-        this.otc            = otc
+        this.name             = name
+        this.windowDelta      = windowDelta
+        this.minDelta         = minDelta
+        this.maxDelta         = maxDelta
+        this.averageDeviation = averageDeviation
+        this.volumeDelta      = volumeDelta
+        this.profitMargin     = profitMargin
+        this.debtPercentage   = debtRatio
+        this.cashBurnRate     = cashBurnRate
+        this.id               = StockInfoId(ticker = ticker, timeWindow = timeWindow)
+        this.secSectorCode    = secSectorCode
+        this.otc              = otc
     }
 
     @Component
@@ -94,13 +97,13 @@ class StockInfo : Serializable {
             loggingService.log("Loading unsupported tickers:  ${results2.size} records")
 
             val file1 = File("stock-info.json")
-            if(file1.exists()) {
+            if (file1.exists()) {
                 file1.delete()
             }
             loggingService.log("New file: " + file1.createNewFile()+", file: " + file1.name)
 
             val file2 = File("unsupported-tickers.json")
-            if(file2.exists()) {
+            if (file2.exists()) {
                 file2.delete()
             }
             loggingService.log("New file: " + file2.createNewFile() +", file:" + file2.name)
