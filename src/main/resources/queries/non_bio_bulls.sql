@@ -10,22 +10,22 @@ SELECT
     f.net_income,
     (100*(m.average_volume*current_price))/f.revenue AS daily_market_cap_multiple,
     m.current_price,
-    f.sec_sector_code
+    t.sec_sector_code
 FROM 
-	midas.statistics m left JOIN financials f ON m.ticker = f.ticker
-    /*left JOIN v_financials vf ON m.ticker = vf.ticker*/
+	midas.statistics m 
+    LEFT JOIN financials f ON m.ticker = f.ticker
+    LEFT JOIN ticker_info t ON f.ticker = t.ticker 
 WHERE 
-	m.ticker = "GCT" AND
-    m.max_delta <=20 AND
-    m.min_delta >= -20 AND
-    m.time_window = 20 AND
+    m.max_delta <=25 AND
+    m.min_delta >= -25 AND
+    m.time_window = 20 AND 
     (
-		f.sec_sector_code IS NULL OR 
+		t.sec_sector_code IS NULL OR 
         (
-			(f.sec_sector_code != "283" AND
-			f.sec_sector_code NOT like "38%" AND
-			f.sec_sector_code NOT like "80%") AND
-			f.otc = 0 AND
+			(t.sec_sector_code != "283" AND
+			t.sec_sector_code NOT like "38%" AND 
+			t.sec_sector_code NOT like "80%") AND
+			t.otc = 0 AND
 			f.quarter_number = 0 AND
 			f.net_income > 0  
 		)

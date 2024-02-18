@@ -1,4 +1,4 @@
-
+/** Bio bulls WITHOUT financials **/
 SELECT 
 	m.ticker,
 	m.window_delta,
@@ -18,9 +18,9 @@ WHERE
     m.min_delta >= -25 AND
     m.time_window = 20 AND 
     (
-		(t.sec_sector_code != "283" AND
-		t.sec_sector_code NOT like "38%" AND 
-		t.sec_sector_code NOT like "80%") AND
+		(t.sec_sector_code = "283" OR
+		t.sec_sector_code like "38%" OR 
+		t.sec_sector_code like "80%") AND
 		t.otc = 0  
 	)
 ORDER BY 

@@ -26,11 +26,11 @@ class Financials {
     @Column(name="id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private val id                          : Long = -1L
-    private val secSectorCode               : Int?
+    /*private val secSectorCode               : Int?
     private val sicCode                     : String?
     private val cik                         : Long
     private val name                        : String
-    private val otc                         : Boolean
+    private val otc                         : Boolean*/
     private val ticker                      : String
     private val fiscalYear                  : Int?
     private val fiscalPeriod                : String?
@@ -67,11 +67,11 @@ class Financials {
         fiscalPeriod: String?,
         endDate: Date?,
         quarterNumber: Int?,
-        secSectorCode: Int?,
+        /*secSectorCode: Int?,
         sicCode: String?,
         cik: Long,
         name: String,
-        otc: Boolean,
+        otc: Boolean,*/
         netIncome: Double?,
         revenue: Double?,
         costOfRevenue: Double?,
@@ -96,11 +96,11 @@ class Financials {
         netChangeInCash: Double?
     ) {
         this.ticker                  = ticker
-        this.secSectorCode           = secSectorCode
+        /*this.secSectorCode           = secSectorCode
         this.cik                     = cik
         this.sicCode                 = sicCode
         this.name                    = name
-        this.otc                     = otc
+        this.otc                     = otc*/
         this.fiscalYear              = fiscalYear
         this.fiscalPeriod            = fiscalPeriod
         this.endDate                 = endDate
@@ -154,7 +154,6 @@ class Financials {
         private const val MINIMUM_YEAR = 2021
         private const val MAX_NUM_QUARTERS = 4
 
-       // private var endDate: Date? = null
         fun import() {
             loggingService.log("Importing financials...")
             //TODO: financialsRepository.deleteEvery() //Using the built-in deleteAll method is slow because it looks like it does a select All first...
@@ -184,7 +183,11 @@ class Financials {
                         /*if((metaData["exchanges"] as JSONArray).contains("OTC")) {
                             continue
                         }*/
-                        if (metaData != null && ((metaData["tickers"] as JSONArray).size > 0)) {
+                        if (
+                                (metaData != null) &&
+                                ((metaData["tickers"] as JSONArray).size > 0) &&
+                                ((metaData["sic"] != null) && metaData["sic"].toString() != "")
+                            ) {
                             metaRecords++
                             loggingService.log("Meta records: $metaRecords, Meta file pre-processed: $fileName")
 
@@ -233,13 +236,32 @@ class Financials {
             metaData: JSONObject,
             financialData: JSONObject?
         ) {
-            if (financialData == null || !hasUsGaapData(financialData = financialData)) {
+            if (financialData == null) {
+                UnsupportedTicker.save(UnsupportedTicker(name = ticker))
+                return
+            }
+
+            val hasUsGaapData = hasUsGaapData(financialData = financialData)
+
+            TickerInfo.save(
+                TickerInfo(
+                    ticker        = ticker,
+                    secSectorCode = metaData["sic"]!!.toString().substring(0, 3).toInt(), //if (metaData["sic"].toString().isNotEmpty()
+                    sicCode       = metaData["sic"]!!.toString(),
+                    name          = (metaData["name"] as String),
+                    cik           = (metaData["cik"] as String).toLong(),
+                    otc           = (metaData["exchanges"] as JSONArray).contains("OTC"),
+                    financialData = hasUsGaapData
+                )
+            )
+
+            if (!hasUsGaapData) {
                 UnsupportedTicker.save(UnsupportedTicker(name = ticker))
                 return
             }
 
             val attr: MutableMap<FiscalGroup, MutableMap<String,Double?>> = HashMap()
-            //endDate = null
+
 
             val attributeArray: JSONArray = oTa(
                 "shares",
@@ -319,11 +341,11 @@ class Financials {
                     financialsRepository.save(
                         Financials(
                             ticker                  = ticker,
-                            secSectorCode           = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
+                            /*secSectorCode           = if (metaData["sic"].toString().isNotEmpty()) { metaData["sic"].toString().substring(0,3).toInt()} else { null},
                             sicCode                 = metaData["sic"]?.toString(),
                             name                    = (metaData["name"] as String),
                             cik                     = (metaData["cik"] as String).toLong(),
-                            otc                     = (metaData["exchanges"] as JSONArray).contains("OTC"),
+                            otc                     = (metaData["exchanges"] as JSONArray).contains("OTC"),*/
                             fiscalYear              = fiscalGroup.fiscalYear,
                             fiscalPeriod            = fiscalGroup.fiscalPeriod,
                             endDate                 = fiscalGroup.endDate,
