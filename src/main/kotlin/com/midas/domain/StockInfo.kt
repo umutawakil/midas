@@ -37,6 +37,7 @@ class StockInfo : Serializable {
     @Column(name = "cfo_working_capital")
     val cashBurnRate: Double?
     val secSectorCode: Int?
+    val sicCode: Int?
     val otc: Boolean?
 
     constructor(
@@ -52,6 +53,7 @@ class StockInfo : Serializable {
         cashBurnRate: Double?,
         timeWindow: Int,
         secSectorCode: Int?,
+        sicCode: Int?,
         otc: Boolean?
     ) {
         this.name             = name
@@ -65,6 +67,7 @@ class StockInfo : Serializable {
         this.cashBurnRate     = cashBurnRate
         this.id               = StockInfoId(ticker = ticker, timeWindow = timeWindow)
         this.secSectorCode    = secSectorCode
+        this.sicCode          = sicCode
         this.otc              = otc
     }
 

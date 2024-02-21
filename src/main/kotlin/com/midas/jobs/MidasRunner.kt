@@ -52,7 +52,7 @@ class MidasRunner {
                 return
             }
 
-            if(jobName == "export-stock-info") {
+            if (jobName == "export-stock-info") {
                 stockInfoSpringAdapter.init()
                 StockInfo.exportToCloud()
                 return

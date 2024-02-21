@@ -1,4 +1,4 @@
-SELECT * FROM midas.statistics WHERE ticker = "ADCT";
+SELECT * FROM midas.statistics WHERE ticker = "SEED";
 
 SELECT MIN(average_deviation) FROM midas.statistics WHERE time_window = 20 AND average_deviation != 0;
 SELECT * FROM midas.statistics WHERE time_window = 20 AND average_deviation > 10;

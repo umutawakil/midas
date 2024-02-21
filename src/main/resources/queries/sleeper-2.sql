@@ -1,5 +1,4 @@
 /** These are stocks that started to make the leaderboard two weeks ago **/
-
 SELECT t3.ticker,t3.window_delta FROM
 (SELECT ticker, window_delta FROM midas.v_raw_stats_with_bio WHERE time_window = 20 AND min_delta >= -25 AND max_delta <= 25 LIMIT 300) t1
 

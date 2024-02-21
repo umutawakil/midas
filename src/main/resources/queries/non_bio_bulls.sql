@@ -27,7 +27,7 @@ WHERE
 			t.sec_sector_code NOT like "80%") AND
 			t.otc = 0 AND
 			f.quarter_number = 0 AND
-			f.net_income > 0  
+			f.net_income != 0  
 		)
 )
 ORDER BY 
