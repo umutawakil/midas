@@ -19,6 +19,12 @@ import java.util.*
 import kotlin.collections.HashMap
 import kotlin.io.path.name
 
+/**
+ * This domain has gone through a number of sources for the raw data starting out with a number of
+ * third parties, including PolyGon, but at the moment, the most accurate method has been to get
+ * the information directly from EDGAR quarterly reports
+ */
+
 @Entity
 @Table(name="financials")
 class Financials {

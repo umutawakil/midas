@@ -9,6 +9,10 @@ import jakarta.persistence.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+/**
+ * This represents a valid ticker but one that is in some strange state
+ */
+
 @Entity
 @Table(name="ignore_ticker")
 class IgnoreTicker {

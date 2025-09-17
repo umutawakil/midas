@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component
 
 /**
  * This is just a hook from where to call the process/job you actually want to run.
+ *
+ * Long term it would better to replace it with entirely command line arguments but in practice
+ * this ended up being lowest risk when ran locally.
  */
 class MidasRunner {
     @Component
@@ -29,7 +32,7 @@ class MidasRunner {
             }
 
             /** TODO: There are various ways to do this without hardcoding the class. Can identify the class from a bean id etc **/
-            val jobName = "export-stock-info"//"calculate-statistics"//"import-snapshots"//System.getenv("JOB_NAME")
+            val jobName = "calculate-statistics"//"calculate-statistics"//"import-snapshots"//System.getenv("JOB_NAME")
 
             /** Financials Job ----------------------------------------------------**/
             if (jobName == "import-financials") {

@@ -10,6 +10,9 @@ import java.net.URL
 
 /**
  * Created by Usman Mutawakil on 10/20/20.
+ *
+ * TODO: This is pretty concise but what is the latest in HTTP wizardry?
+ *
  */
 class HttpUtility {
     companion object {

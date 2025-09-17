@@ -64,7 +64,7 @@ class StockSnapshot {
         private val executorService: ExecutorService = executor
 
         private val snapshotMap: MutableMap<String,MutableList<StockSnapshot>> = HashMap()
-        private val WINDOWS: List<Int> = listOf(3, 5, 10, 20, 40, 60)
+        private val WINDOWS: List<Int> = listOf(2, 3, 5, 10, 20, 40, 60)
         private val activeTickers: MutableSet<String> = HashSet()
         private var startTime = 0L
 
@@ -158,8 +158,8 @@ class StockSnapshot {
 
             loggingService.log("Removing stale tickers...")
             /*Remove stale tickers **/
-            for(t1 in tickers) {
-                if(!activeTickers.contains(t1)) {
+            for (t1 in tickers) {
+                if (!activeTickers.contains(t1)) {
                     Ticker.delete(t1)
                     staleTickers++
                 }
@@ -197,8 +197,22 @@ class StockSnapshot {
                     averageVolume /= w
                     averageDelta  /= w
 
+                    var weeksPositive = 0
+                    if (w >= 5) { //TODO: This if check may be redundant givent the if statement in the while loop BUT, it is an explicit safeguard that might be more refactor robust!
+                        var k = 0
+                        while (k  < w) {
+                            if ((k + 4) >= snapshots.size) {break}
+                            val tempDelta = delta(x2 = snapshots[k], x1 = snapshots[k + 4])
+                            if (tempDelta < 0) {
+                                break
+                            }
+                            weeksPositive++
+                            k += 5
+                        }
+                    }
+
                     for (i in 1 until (w + 1)) {
-                        if (i >= snapshots.size) {break}
+                        if (i >= snapshots.size) { break }
                         val currentDelta = delta(x2 = snapshots[i - 1], x1 = snapshots[i])
                         //if(averageDelta != 0.0) {
                             averageDeviation += abs(averageDelta - currentDelta)//(100 * abs(averageDelta - currentDelta)) / averageDelta
@@ -211,25 +225,30 @@ class StockSnapshot {
                     var volumeDelta: Double
                     //TODO: Need to find more about these stocks with very little data below (w)
                     //TODO: THis edge case needs unit tests.
-                    if (snapshots.size >= w) {
+                    if ((snapshots.size >= w) && (snapshots.size >= 3)) { //some snapshots only have 1 sample and that causes this to explode for w=1
                         windowDelta = delta(x2 = snapshots[0], x1 = snapshots[w - 1])
                         volumeDelta = calculateVolumeDelta(x2 = snapshots[0], x1 = snapshots[w - 1])
 
                         Statistics.save(
                             Statistics(
-                                ticker           = t,
-                                minPrice         = minPrice,
-                                maxPrice         = maxPrice,
-                                currentPrice     = snapshots[0].price,
-                                maxDelta         = maxDelta,
-                                minDelta         = minDelta,
-                                averageDelta     = averageDelta,
-                                averageDeviation = averageDeviation,
-                                averageVolume    = averageVolume,
-                                volumeDelta      = volumeDelta,
-                                windowDelta      = windowDelta,
-                                timeWindow       = w,
-                                count            = snapshots.size
+                                ticker              = t,
+                                minPrice            = minPrice,
+                                maxPrice            = maxPrice,
+                                currentPrice        = snapshots[0].price,
+                                currentPriceDelta   = delta(x2 = snapshots[0], x1 = snapshots[1]),
+                                currentVolumeDelta  = calculateVolumeDelta(x2 = snapshots[0], x1 = snapshots[1]),
+                                previousPriceDelta  = delta(x2 = snapshots[1], x1 = snapshots[2]),
+                                previousVolumeDelta = calculateVolumeDelta(x2 = snapshots[1], x1 = snapshots[2]),
+                                weeksPositive       = weeksPositive,
+                                maxDelta            = maxDelta,
+                                minDelta            = minDelta,
+                                averageDelta        = averageDelta,
+                                averageDeviation    = averageDeviation,
+                                averageVolume       = averageVolume,
+                                volumeDelta         = volumeDelta,
+                                windowDelta         = windowDelta,
+                                timeWindow          = w,
+                                count               = snapshots.size
                             )
                         )
                     }

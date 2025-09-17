@@ -16,6 +16,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.Serializable
 
+/**
+ * In comparison to Statistics this is the result of a view and its intended to be populated for
+ * export and display in the midas-web application.
+ */
+
 
 @Entity
 @Table(name="v_stock_info")
@@ -31,6 +36,10 @@ class StockInfo : Serializable {
     val maxDelta: Double
     val averageDeviation: Double
     val volumeDelta: Double
+    val currentPriceDelta: Double
+    val currentVolumeDelta: Double
+    val previousPriceDelta: Double
+    val previousVolumeDelta: Double
     val profitMargin: Double?
     @Column(name = "debt_percentage")
     val debtPercentage: Double?
@@ -48,6 +57,10 @@ class StockInfo : Serializable {
         maxDelta: Double,
         averageDeviation: Double,
         volumeDelta: Double,
+        currentPriceDelta: Double,
+        currentVolumeDelta: Double,
+        previousPriceDelta: Double,
+        previousVolumeDelta: Double,
         profitMargin: Double?,
         debtRatio: Double?,
         cashBurnRate: Double?,
@@ -56,19 +69,23 @@ class StockInfo : Serializable {
         sicCode: Int?,
         otc: Boolean?
     ) {
-        this.name             = name
-        this.windowDelta      = windowDelta
-        this.minDelta         = minDelta
-        this.maxDelta         = maxDelta
-        this.averageDeviation = averageDeviation
-        this.volumeDelta      = volumeDelta
-        this.profitMargin     = profitMargin
-        this.debtPercentage   = debtRatio
-        this.cashBurnRate     = cashBurnRate
-        this.id               = StockInfoId(ticker = ticker, timeWindow = timeWindow)
-        this.secSectorCode    = secSectorCode
-        this.sicCode          = sicCode
-        this.otc              = otc
+        this.name                = name
+        this.windowDelta         = windowDelta
+        this.minDelta            = minDelta
+        this.maxDelta            = maxDelta
+        this.averageDeviation    = averageDeviation
+        this.volumeDelta         = volumeDelta
+        this.currentPriceDelta   = currentPriceDelta
+        this.currentVolumeDelta  = currentVolumeDelta
+        this.previousPriceDelta  = previousPriceDelta
+        this.previousVolumeDelta = previousVolumeDelta
+        this.profitMargin        = profitMargin
+        this.debtPercentage      = debtRatio
+        this.cashBurnRate        = cashBurnRate
+        this.id                  = StockInfoId(ticker = ticker, timeWindow = timeWindow)
+        this.secSectorCode       = secSectorCode
+        this.sicCode             = sicCode
+        this.otc                 = otc
     }
 
     @Component

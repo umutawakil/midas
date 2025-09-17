@@ -5,6 +5,11 @@ import java.lang.reflect.Field
 import java.text.SimpleDateFormat
 import java.util.*
 
+
+/**
+ * This class is the result of trying to adhere to a stricter approach to value objects
+ *
+ */
 class DomainValueCompareUtil{
     companion object {
         fun equalInValue(object1: Any, object2: Any)  {

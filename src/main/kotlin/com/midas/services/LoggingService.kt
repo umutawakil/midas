@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service
 /**
  * Created by Usman Mutawakil on 6/28/22.
  *
+ * TODO: ActiveRecord style approach to logging might be a better way to describe what is below
+ *
  * TODO: Would be beneficial if this can be replaced with static calls. I could add beans
  * to it later if config from applicationProperties class is needed but at the moment
  * this isn't a service and should be made LoggingUtility

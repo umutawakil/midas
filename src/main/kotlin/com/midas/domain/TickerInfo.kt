@@ -6,6 +6,11 @@ import jakarta.persistence.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+
+/**
+ * This class provides a way to join tickers with their EDGAR data
+ */
+
 @Entity
 @Table(name="ticker_info")
 class TickerInfo {

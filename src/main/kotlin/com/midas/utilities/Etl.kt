@@ -1,5 +1,10 @@
 package com.midas.utilities
 
+/**
+ * This utility class exists because of some inconsistencies in who data types are enforced
+ * in the federal EDGAR data.
+ */
+
 class Etl {
     companion object {
         fun double(n: Any?) = (n!! as Number).toDouble()

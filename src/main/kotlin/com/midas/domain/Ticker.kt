@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component
 import java.text.SimpleDateFormat
 import java.util.*
 
+/** As the name suggests **/
+
 /** TODO: THis needs to update itself regularly or have the stock snapshot logic update ticker by ticker**/
 @Entity
 @Table(name="ticker")
